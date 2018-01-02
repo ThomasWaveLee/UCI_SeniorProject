@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="app_name">Crazyflie Client</string>
-    <string name="title_activity_main">Crazyflie Client</string>
+    <string name="app_name">LightingTheWay</string>
+    <string name="title_activity_main">LightingTheWay</string>
 
     <!-- Header -->
     <string name="battery_text">%1$3d%%</string>
@@ -21,6 +21,7 @@
     <string name="button_ledring_contentDescription">LED ring button</string>
     <string name="button_headlight_contentDescription">Headlight button</string>
     <string name="button_buzzer_contentDescription">Buzzer button</string>
+    <string name="button_ramp_contentDescription">Ramp button</string>
 
     <!-- Connection settings -->
     <string name="preferences_radio_title">Connection settings</string>

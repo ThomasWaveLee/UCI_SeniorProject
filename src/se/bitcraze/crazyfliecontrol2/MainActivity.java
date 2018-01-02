@@ -123,12 +123,14 @@ public class MainActivity extends Activity {
 
     private boolean mHeadlightToggle = false;
     private boolean mSoundToggle = false;
+    private boolean mRampToggle = false;
     private int mRingEffect = 0;
     private int mNoRingEffect = 0;
     private int mCpuFlash = 0;
     private ImageButton mRingEffectButton;
     private ImageButton mHeadlightButton;
     private ImageButton mBuzzerSoundButton;
+    private ImageButton mRampButton;
     private File mCacheDir;
 
     private TextView mTextView_battery;
@@ -160,6 +162,7 @@ public class MainActivity extends Activity {
 
         //initialize buttons
         mToggleConnectButton = (ImageButton) findViewById(R.id.imageButton_connect);
+        mRampButton = (ImageButton) findViewById(R.id.button_ramp);
         initializeMenuButtons();
 
         mFlightDataView = (FlightDataView) findViewById(R.id.flightdataview);
@@ -237,6 +240,7 @@ public class MainActivity extends Activity {
 
             @Override
             public void onClick(View v) {
+                Log.d(LOG_TAG, "Connect Button Clicked");
                 try {
                     if (mCrazyflie != null && mCrazyflie.isConnected()) {
                         disconnect();
@@ -258,6 +262,29 @@ public class MainActivity extends Activity {
               startActivity(intent);
             }
         });
+
+        mRampButton.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                Log.d(LOG_TAG, "RampButton clicked");
+                if (mCrazyflie != null && mCrazyflie.isConnected())
+                    if (!mRampToggle) {
+                        Log.d(LOG_TAG, "Ramp - start");
+                        if(mSendJoystickDataThread != null) {
+                            mSendJoystickDataThread.interrupt();
+                            mSendJoystickDataThread = null;
+                        }
+                        mRampButton.setBackgroundDrawable(getResources().getDrawable(R.drawable.custom_button_connected_ble));
+                        startRampSequence();
+                    } else {
+                        Log.d(LOG_TAG, "Ramp - land");
+                        mRampButton.setBackgroundDrawable(getResources().getDrawable(R.drawable.custom_button));
+                        startLandSequence();
+                    }
+                mRampToggle = !mRampToggle;
+            }
+        });
     }
 
     @Override
@@ -274,6 +301,7 @@ public class MainActivity extends Activity {
         mRingEffectButton.setEnabled(false);
         mHeadlightButton.setEnabled(false);
         mBuzzerSoundButton.setEnabled(false);
+        mRampButton.setEnabled(false);
         if (mPreferences.getBoolean(PreferencesActivity.KEY_PREF_IMMERSIVE_MODE_BOOL, false)) {
             setHideyBar();
         }
@@ -476,6 +504,7 @@ public class MainActivity extends Activity {
             });
         }
 
+        // THOMAS: This one is called
         @Override
         public void connected(String connectionInfo) {
             runOnUiThread(new Runnable() {
@@ -485,14 +514,18 @@ public class MainActivity extends Activity {
                     if (mCrazyflie != null && mCrazyflie.getDriver() instanceof BleLink) {
                         mToggleConnectButton.setBackgroundDrawable(getResources().getDrawable(R.drawable.custom_button_connected_ble));
                         // TODO: Remove this once BleLink supports Param and Logg subsystems
+                        mRampButton.setEnabled(true);
+                        // THOMAS: turned off since we don't need joystick controls atm
                         startSendJoystickDataThread();
                     } else {
                         mToggleConnectButton.setBackgroundDrawable(getResources().getDrawable(R.drawable.custom_button_connected));
+                        mRampButton.setEnabled(true);
                     }
                 }
             });
         }
 
+        // THOMAS: This one isn;t called from what I can tell
         @Override
         public void setupFinished(String connectionInfo) {
            final Toc paramToc = mCrazyflie.getParam().getToc();
@@ -554,8 +587,13 @@ public class MainActivity extends Activity {
                 createLogConfigs();
                 startLogConfigs();
             }
-
-            startSendJoystickDataThread();
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    mRampButton.setEnabled(true);
+                }
+            });
+            //startSendJoystickDataThread();
         }
 
         @Override
@@ -592,6 +630,7 @@ public class MainActivity extends Activity {
                     mRingEffectButton.setEnabled(false);
                     mHeadlightButton.setEnabled(false);
                     mBuzzerSoundButton.setEnabled(false);
+                    mRampButton.setEnabled(false);
                     setBatteryLevel(-1.0f);
                 }
             });
@@ -673,7 +712,7 @@ public class MainActivity extends Activity {
             @Override
             public void run() {
                 while (mCrazyflie != null) {
-                    // Log.d(LOG_TAG, "Thrust absolute: " + mController.getThrustAbsolute());
+                    Log.d(LOG_TAG, "Thrust absolute: " + mController.getThrustAbsolute());
                     mCrazyflie.sendPacket(new CommanderPacket(mController.getRoll(), mController.getPitch(), mController.getYaw(), (char) (mController.getThrustAbsolute()), mControls.isXmode()));
                     try {
                         Thread.sleep(20);
@@ -686,6 +725,57 @@ public class MainActivity extends Activity {
         });
         mSendJoystickDataThread.start();
     }
+
+    final private static int thrustSteps = 100;
+    final private static float maxThreshVal = 65535;
+
+    private void startRampSequence() {
+        Thread rampSequenceThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                float thrust = maxThreshVal*mControls.getMinThrust()/100;
+                float thrustStep = maxThreshVal*mControls.getThrustFactor()/thrustSteps/100;
+                float maxThrustVal = maxThreshVal*mControls.getMaxThrust()/100;
+                for(; thrust <= maxThrustVal; thrust += thrustStep) {
+                    Log.d(LOG_TAG, "thrust: " + String.valueOf(thrust));
+                    mCrazyflie.sendPacket(new CommanderPacket(0, 0, 0, (char) ((int)(thrust)), mControls.isXmode()));
+                    try {
+                        Thread.sleep(50);
+                    } catch (InterruptedException e) {
+                        Log.d(LOG_TAG, "RampSequenceThread was interrupted.");
+                        break;
+                    }
+                }
+                Log.d(LOG_TAG, "MinThrust: " + String.valueOf(mControls.getMinThrust()));
+                Log.d(LOG_TAG, "MaxThrust: " + String.valueOf(mControls.getMaxThrust()));
+            }
+        });
+        rampSequenceThread.start();
+    };
+
+    private void startLandSequence() {
+        Thread landSequenceThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                float thrust = maxThreshVal*mControls.getMaxThrust()/100;
+                float thrustStep = maxThreshVal*mControls.getThrustFactor()/thrustSteps/100;
+                float minThrustVal = maxThreshVal*mControls.getMinThrust()/100;
+                for(; thrust > minThrustVal; thrust -= thrustStep){
+                    Log.d(LOG_TAG, "thrust: " + String.valueOf(thrust));
+                    mCrazyflie.sendPacket(new CommanderPacket(0, 0, 0, (char) ((int)(thrust)), mControls.isXmode()));
+                    try {
+                        Thread.sleep(50);
+                    } catch (InterruptedException e) {
+                        Log.d(LOG_TAG, "LandSequenceThread was interrupted.");
+                        break;
+                    }
+                }
+                mCrazyflie.sendPacket(new CommanderPacket(0, 0, 0, (char) 0, mControls.isXmode()));
+                startSendJoystickDataThread();
+            }
+        });
+        landSequenceThread.start();
+    };
 
     // extra method for onClick attribute in XML
     public void switchLedRingEffect(View view) {
@@ -704,7 +794,7 @@ public class MainActivity extends Activity {
 
     //TODO: make runAltAction more universal
     public void runAltAction(String action) {
-        Log.i(LOG_TAG, "runAltAction: " + action);
+        Log.d(LOG_TAG, "runAltAction: " + action);
         if (mCrazyflie != null) {
             if ("ring.headlightEnable".equalsIgnoreCase(action)) {
                 // Toggle LED ring headlight
