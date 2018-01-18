@@ -85,12 +85,16 @@ import android.widget.Toast;
 
 import com.MobileAnarchy.Android.Widgets.Joystick.DualJoystickView;
 
+import lightingtheway.PacketControl;
+
 public class MainActivity extends Activity {
 
     private static final String LOG_TAG = "CrazyflieControl";
 
     private DualJoystickView mDualJoystickView;
     private FlightDataView mFlightDataView;
+
+    private PacketControl mPacketControl;
 
     private Crazyflie mCrazyflie;
     private CrtpDriver mDriver;
@@ -517,6 +521,9 @@ public class MainActivity extends Activity {
                         mRampButton.setEnabled(true);
                         // THOMAS: turned off since we don't need joystick controls atm
                         startSendJoystickDataThread();
+
+                        // THOMAS: Our made controller to make and keep track of sent commands
+                        mPacketControl = new PacketControl(mCrazyflie,mControls);
                     } else {
                         mToggleConnectButton.setBackgroundDrawable(getResources().getDrawable(R.drawable.custom_button_connected));
                         mRampButton.setEnabled(true);
@@ -525,7 +532,6 @@ public class MainActivity extends Activity {
             });
         }
 
-        // THOMAS: This one isn;t called from what I can tell
         @Override
         public void setupFinished(String connectionInfo) {
            final Toc paramToc = mCrazyflie.getParam().getToc();
@@ -538,6 +544,8 @@ public class MainActivity extends Activity {
                         Toast.makeText(getApplicationContext(), "Parameters TOC fetch finished: " + paramToc.getTocSize(), Toast.LENGTH_SHORT).show();
                     }
                 });
+// THOMAS: These cause a crash when trying to start-up. This is because the parameters are named wrong and may not be active.
+/*
                 //activate buzzer sound button when a CF2 is recognized (a buzzer can not yet be detected separately)
                 mCrazyflie.getParam().addParamListener(new ParamListener("cpu", "flash") {
                     @Override
@@ -556,11 +564,12 @@ public class MainActivity extends Activity {
                     }
                 });
                 mCrazyflie.getParam().requestParamUpdate("cpu.flash");
+
                 //set number of LED ring effects
-                mCrazyflie.getParam().addParamListener(new ParamListener("ring", "neffect") {
+                mCrazyflie.getParam().addParamListener(new ParamListener("ring", "effect") {
                     @Override
                     public void updated(String name, Number value) {
-                        mNoRingEffect = mCrazyflie.getParam().getValue("ring.neffect").intValue();
+                        mNoRingEffect = mCrazyflie.getParam().getValue("ring.effect").intValue();
                         //enable LED ring action buttons only when ring.neffect parameter is set correctly (=> hence it's a CF2 with a LED ring)
                         if (mNoRingEffect > 0) {
                             runOnUiThread(new Runnable() {
@@ -574,8 +583,9 @@ public class MainActivity extends Activity {
                         Log.d(LOG_TAG, "No of ring effects: " + mNoRingEffect);
                     }
                 });
-                mCrazyflie.getParam().requestParamUpdate("ring.neffect");
+*/
             }
+
             if (logToc != null) {
                 mLogToc = logToc;
                 runOnUiThread(new Runnable() {
@@ -632,6 +642,7 @@ public class MainActivity extends Activity {
                     mBuzzerSoundButton.setEnabled(false);
                     mRampButton.setEnabled(false);
                     setBatteryLevel(-1.0f);
+                    mPacketControl = null;
                 }
             });
             stopLogConfigs();
@@ -708,11 +719,13 @@ public class MainActivity extends Activity {
      * Start thread to periodically send commands containing the user input
      */
     private void startSendJoystickDataThread() {
+        if (mSendJoystickDataThread != null){
+            return;
+        }
         mSendJoystickDataThread = new Thread(new Runnable() {
             @Override
             public void run() {
                 while (mCrazyflie != null) {
-                    Log.d(LOG_TAG, "Thrust absolute: " + mController.getThrustAbsolute());
                     mCrazyflie.sendPacket(new CommanderPacket(mController.getRoll(), mController.getPitch(), mController.getYaw(), (char) (mController.getThrustAbsolute()), mControls.isXmode()));
                     try {
                         Thread.sleep(20);
@@ -751,6 +764,7 @@ public class MainActivity extends Activity {
             }
         });
         rampSequenceThread.start();
+
     };
 
     private void startLandSequence() {
@@ -868,11 +882,12 @@ public class MainActivity extends Activity {
         return !usbDeviceList.isEmpty();
     }
 
+    // THOMAS: The log reader?
     private LogAdapter standardLogAdapter = new LogAdapter() {
 
         public void logDataReceived(LogConfig logConfig, Map<String, Number> data, int timestamp) {
             super.logDataReceived(logConfig, data, timestamp);
-
+            Log.d(LOG_TAG, "Log recieved: " + logConfig.getName());
             if ("Standard".equals(logConfig.getName())) {
                 final float battery = (float) data.get("pm.vbat");
                 runOnUiThread(new Runnable() {
