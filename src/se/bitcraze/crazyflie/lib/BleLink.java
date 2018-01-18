@@ -31,6 +31,9 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,12 +65,17 @@ public class BleLink extends CrtpDriver {
 	// Set to -40 to connect only to close-by Crazyflie
 	private static final int rssiThreshold = -100;
 
+	private final BlockingQueue<byte[]> mInQueue;
+
 	private BluetoothAdapter mBluetoothAdapter;
 	private BluetoothDevice mDevice;
 	private BluetoothGattCharacteristic mLedChar;
 	private List<BluetoothGattCharacteristic> mLedsChars;
 	private BluetoothGatt mGatt;
+	private BluetoothGatt mGattDown;
 	private BluetoothGattCharacteristic mCrtpChar;
+	private BluetoothGattCharacteristic mCrtpUpChar;
+	private BluetoothGattCharacteristic mCrtpDownChar;
 	private Timer mScannTimer;
 
 	private static final String CF_DEVICE_NAME = "Crazyflie";
@@ -90,6 +98,7 @@ public class BleLink extends CrtpDriver {
 	public BleLink(Activity ctx, boolean writeWithAnswer) {
 		mContext = ctx;
 		mWriteWithAnswer = writeWithAnswer;
+		mInQueue = new LinkedBlockingQueue<byte[]>();
 	}
 
 	private BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
@@ -126,13 +135,25 @@ public class BleLink extends CrtpDriver {
 				gatt.disconnect();
 			} else {
 				BluetoothGattService cfService = gatt.getService(CF_SERVICE);
+
 				mCrtpChar = cfService.getCharacteristic(CRTP);
+				//mCrtpUpChar = cfService.getCharacteristic(CRTPUP);
+				mCrtpDownChar = cfService.getCharacteristic(CRTPDOWN);
 
 				gatt.setCharacteristicNotification(mCrtpChar, true);
+				//gatt.setCharacteristicNotification(mCrtpUpChar, true);
+				gatt.setCharacteristicNotification(mCrtpDownChar, true);
 
-				BluetoothGattDescriptor descriptor = mCrtpChar.getDescriptor(UUID.fromString("00002902-0000-1000-8000-00805F9B34FB"));
+
+				// add descriptor for CTRP
+				BluetoothGattDescriptor descriptor = mCrtpDownChar.getDescriptor(UUID.fromString("00002902-0000-1000-8000-00805F9B34FB"));
 				descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-				gatt.writeDescriptor(descriptor);
+				mLogger.debug("1st Descriptor: " + gatt.writeDescriptor(descriptor));
+
+				// add descriptor for CTRPDOWN
+				//descriptor = mCrtpDownChar.getDescriptor(UUID.fromString("00002902-0000-1000-8000-00805F9B34FB"));
+				//descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+				//mLogger.debug("2nd Descriptor: " + gatt.writeDescriptor(descriptor));
 
 				mLogger.debug( "Connected!");
 
@@ -162,12 +183,36 @@ public class BleLink extends CrtpDriver {
         public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
 			super.onCharacteristicRead(gatt, characteristic, status);
 			mLogger.debug("On read call for characteristic: " + characteristic.getUuid().toString());
+			byte[] byteCode = characteristic.getValue();
+			mLogger.debug("Characteristic Values:\n");
+			for (byte i: byteCode) {
+				mLogger.debug(Integer.toHexString(i));
+			}
+			// THOMAS: this might not be needed. Trying to write BLE downlink
+			//mWritten = false;
         }
 
 		@Override
 		public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-			//super.onCharacteristicChanged(gatt, characteristic);
-		    mLogger.debug("On changed call for characteristic: " + characteristic.getUuid().toString());
+			super.onCharacteristicChanged(gatt, characteristic);
+			mLogger.debug("On changed call for characteristic: " + characteristic.getUuid().toString());
+			try {
+				byte[] data = characteristic.getValue();
+				if (data != null && data.length > 0) {
+					mInQueue.put(data);
+				}
+			} catch(InterruptedException e) {
+					mLogger.error("InterruptedException: " + e.getMessage());
+				return;
+			}
+			// Debug Print for whats being received
+			byte[] byteCode = characteristic.getValue();
+			mLogger.debug("Bytes Recieved: " + byteCode.length);
+			String binaryValue = "";
+			for (byte i: byteCode) {
+                binaryValue += Integer.toBinaryString(i);
+			}
+            mLogger.debug("Characteristic Value: " + binaryValue);
 		}
 	};
 
@@ -289,7 +334,14 @@ public class BleLink extends CrtpDriver {
 						mCrtpChar.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE);
 						mWritten = true;
 					}
-					mCrtpChar.setValue(pk.toByteArray());
+                    mCrtpChar.setValue(pk.toByteArray());
+					/* // Debug prints to see whats being sent
+					String pkt = "";
+					for(byte i: pk.toByteArray()){
+						pkt += Integer.toBinaryString(i);
+					}
+					mLogger.debug("Sent packet: " + pkt);
+					*/
 					mGatt.writeCharacteristic(mCrtpChar);
 				}
 	        }
@@ -299,7 +351,59 @@ public class BleLink extends CrtpDriver {
 
     @Override
     public CrtpPacket receivePacket(int wait) {
-        return isConnected() ? CrtpPacket.NULL_PACKET : null;
+		try {
+			if(isConnected()){
+				// grab 1st packet
+				byte[] pkt = mInQueue.poll((long) wait, TimeUnit.SECONDS);
+				if (pkt == null) {
+                    return null;
+                }
+				byte BLEheader = pkt[0];
+				int headerValue = Byte.valueOf(BLEheader).intValue();
+				// DECODING
+				// BLE packet header has form:
+				// 7 = start
+				// 5-6 = pid
+				// 0-4 = length
+				// shift by 5 to get bits 5-7
+				int pid = headerValue >> 5;
+				// mask with 3 to get bits 5-6
+				pid = pid & 0b011;
+				// m
+				int length = headerValue & 0b00011111;
+				// BLE has length = actualLength-1
+				length++;
+
+				byte[] crtpPkt = new byte[32];
+				// copy out crtp packets values from pkt1
+				for(int i = 1; i < pkt.length; i++){
+					crtpPkt[i-1] = pkt[i];
+				}
+				if (length > 19){
+					// 2nd packet
+                    byte[] pkt2;
+					pkt2 = mInQueue.poll((long) wait, TimeUnit.SECONDS);
+					if(pkt2 == null){
+					    return null;
+                    }
+					byte BLEheader2 = pkt2[0];
+					int headerValue2 = Byte.valueOf(BLEheader2).intValue();
+					int pid2 = headerValue2 >> 5;
+					pid2 = pid2 & 0b11;
+					if (pid2 != pid){
+						return null;
+					}
+					// copy out crtp packets values from pkt
+					for(int i = 1; i < pkt2.length; i++){
+						crtpPkt[pkt.length+i-1] = pkt2[i];
+					}
+				}
+				return new CrtpPacket(crtpPkt);
+			}
+		} catch (InterruptedException e) {
+			mLogger.error("InterruptedException: " + e.getMessage());
+		}
+        return null;
     }
 
     @Override
