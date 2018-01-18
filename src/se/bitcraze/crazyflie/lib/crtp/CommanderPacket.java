@@ -39,6 +39,7 @@ public class CommanderPacket extends CrtpPacket {
     private final char mThrust;
     private final boolean mClientXmode; // client side x-mode (default is +-mode)
 
+
     /**
      * Create a new commander packet.
      *

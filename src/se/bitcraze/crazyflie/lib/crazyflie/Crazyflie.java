@@ -27,6 +27,8 @@
 
 package se.bitcraze.crazyflie.lib.crazyflie;
 
+import android.util.Log;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Set;
@@ -267,11 +269,19 @@ public class Crazyflie {
             mLogger.info("Initial packet has been received! => State.CONNECTED");
             this.mState = State.CONNECTED;
             //self.link_established.call(self.link_uri)
+
+            // THOMAS: Put in start-up
+            this.mDriver.notifyConnected();
+            startConnectionSetup();
+
+            // THOMAS: This hack made by the person was to stop BLE from finish set-up. We need to remove it.
+            /*
             //TODO: fix hacky-di-hack
             if (this.mDriver instanceof RadioDriver) {
                 this.mDriver.notifyConnected();
                 startConnectionSetup();
             }
+            */
         }
         //self.packet_received.remove_callback(self._check_for_initial_packet_cb)
         // => IncomingPacketHandler
@@ -316,7 +326,10 @@ public class Crazyflie {
         } else {
             //TODO: shortcut for BLELink
             mState = State.SETUP_FINISHED; //important, otherwise BLE keeps trying to reconnect
-            mDriver.notifySetupFinished();
+            // THOMAS: This is needed to start receiving Param/Log packets. However the receivePackets isn't set-up
+            mLogg.refreshToc(loggTocFetchFinishedListener, mTocCache);
+            // THOMAS: This gets called at the end of call of refreshToc
+            //mDriver.notifySetupFinished();
         }
 
         //TODO: self.mem.refresh(self._mems_updated_cb)
