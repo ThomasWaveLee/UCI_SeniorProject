@@ -409,7 +409,7 @@ public class BleLink extends CrtpDriver {
     }
 
     @Override
-    public boolean scanSelected(int channel, int datarate, byte[] packet) {
+    public boolean scanSelected(ConnectionData connectionData, byte[] packet) {
         // TODO Auto-generated method stub
         return false;
     }
@@ -423,5 +423,4 @@ public class BleLink extends CrtpDriver {
     public void stopSendReceiveThread() {
         // TODO Auto-generated method stub
     }
-
 }

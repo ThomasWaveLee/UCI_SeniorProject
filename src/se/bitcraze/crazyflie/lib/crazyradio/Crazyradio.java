@@ -35,7 +35,6 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import se.bitcraze.crazyflie.lib.crtp.CrtpPacket;
 import se.bitcraze.crazyflie.lib.usb.CrazyUsbInterface;
 
 /**
@@ -78,7 +77,7 @@ public class Crazyradio {
     private float mVersion; // Crazyradio firmware version
     private String mSerialNumber; // Crazyradio serial number
 
-    public final static byte[] NULL_PACKET = new byte[] { (byte) 0xff };
+    protected final static byte[] NULL_PACKET = new byte[] { (byte) 0xff };
 
     /**
      * Create object and scan for USB dongle if no device is supplied
@@ -174,7 +173,7 @@ public class Crazyradio {
     /**
      * Set the radio data rate to be used.
      *
-     * @param rate new data rate. Possible values are in range 0-2.
+     * @param datarate new data rate. Possible values are in range 0-2.
      */
     public void setDatarate(int datarate) {
         if (datarate < 0 || datarate > 2) {
@@ -273,7 +272,7 @@ public class Crazyradio {
      *
      * @return list of channels
      */
-    public List<Integer> scanChannels1() {
+    public List<Integer> scanChannels() {
         return scanChannels(0, 125);
     }
 
@@ -284,20 +283,7 @@ public class Crazyradio {
             if (hasFwScan()) {
                 result.addAll(firmwareScan(start, stop));
             } else {
-                // Slow PC-driven scan
-                mLogger.debug("Slow scan...");
-                // for i in range(start, stop + 1):
-                for (int channel = start; channel <= stop; channel++) {
-                    if(scanSelected(channel, NULL_PACKET)) {
-                        mLogger.debug("Found channel: " + channel);
-                        result.add(channel);
-                    }
-                    try {
-                        Thread.sleep(20);
-                    } catch (InterruptedException e) {
-                        mLogger.error("InterruptedException: " + e.getMessage());
-                    }
-                }
+                result = slowScan(start, stop);
             }
         } else {
             mLogger.warn("Crazyradio not attached.");
@@ -305,90 +291,44 @@ public class Crazyradio {
         return result;
     }
 
-    /**
-     * Scan for available channels.
-     *
-     * @return array containing the found channels and datarates.
-     * @throws IOException
-     * @throws IllegalStateException if the Crazyradio is not attached (the connection is <code>null</code>).
-     */
-
-    public ConnectionData[] scanChannels() throws IOException {
-        return scanChannels(false);
-    }
 
     /**
-     * Scan for available channels.
-     *
-     * @param useSlowScan
-     * @return array containing the found channels and datarates.
-     * @throws IOException
-     * @throws IllegalStateException if the Crazyradio is not attached (the connection is <code>null</code>).
+     * Slow PC-driven scan
+     * 
+     * @param start
+     * @param stop
+     * @return list of channels
      */
-    public ConnectionData[] scanChannels(boolean useSlowScan) throws IOException {
-        List<ConnectionData> result = new ArrayList<ConnectionData>();
-        if (mUsbInterface.isUsbConnected()) {
-            // null packet
-            final byte[] packet = CrtpPacket.NULL_PACKET.toByteArray();
-            final byte[] rdata = new byte[64];
-
-            mLogger.debug("Scanning...");
-            // scan for all 3 data rates
-            for (int datarate = 0; datarate < 3; datarate++) {
-                // set data rate
-                mUsbInterface.sendControlTransfer(0x40, SET_DATA_RATE, datarate, 0, null);
-                if (useSlowScan) {
-                    result.addAll(scanChannelsSlow(datarate));
-                } else {
-                    mLogger.debug("Fast firmware scan...");
-                    //long transfer timeout (1000) is important!
-                    mUsbInterface.sendControlTransfer(0x40, SCAN_CHANNELS, 0, 125, packet);
-                    final int nfound = mUsbInterface.sendControlTransfer(0xc0, SCAN_CHANNELS, 0, 0, rdata);
-                    if (nfound != 64) {
-                        for (int i = 0; i < nfound; i++) {
-                            result.add(new ConnectionData(rdata[i], datarate));
-                            mLogger.debug("Found channel: " + rdata[i] + " Data rate: " + datarate);
-                        }
-                    }
-                }
-            }
-        } else {
-            mLogger.debug("connection is null");
-            throw new IllegalStateException("Crazyradio not attached");
-        }
-        return result.toArray(new ConnectionData[result.size()]);
-    }
-
-    /**
-     * Slow manual scan
-     *
-     * @param datarate
-     * @throws IOExceptionsbInterface
-     */
-    private List<ConnectionData> scanChannelsSlow(int datarate) throws IOException {
-        mLogger.debug("Slow manual scan...");
-        List<ConnectionData> result = new ArrayList<ConnectionData>();
-
-        for (int channel = 0; channel < 126; channel++) {
-            // set channel
-            mUsbInterface.sendControlTransfer(0x40, SET_RADIO_CHANNEL, channel, 0, null);
-
-            byte[] receiveData = new byte[33];
-            final byte[] sendData = CrtpPacket.NULL_PACKET.toByteArray();
-
-            mUsbInterface.sendBulkTransfer(sendData, receiveData);
-            if ((receiveData[0] & 1) != 0) { // check if ack received
-                result.add(new ConnectionData(channel, datarate));
-                mLogger.debug("Channel found: " + channel + " Data rate: " + datarate);
+    private List<Integer> slowScan(int start, int stop) {
+        mLogger.debug("Slow scan...");
+        List<Integer> result = new ArrayList<Integer>();
+        // for i in range(start, stop + 1):
+        for (int channel = start; channel <= stop; channel++) {
+            if(scanSelected(channel, NULL_PACKET)) {
+                mLogger.debug("Found channel: %s", channel);
+                result.add(channel);
             }
             try {
-                Thread.sleep(20, 0);
+                Thread.sleep(20);
             } catch (InterruptedException e) {
-                mLogger.error("scanChannelsSlow InterruptedException");
+                mLogger.error("InterruptedException: " + e.getMessage());
             }
         }
         return result;
     }
+
+    /*
+    def scan_selected(self, selected, packet):
+        result = ()
+        for s in selected:
+            self.set_channel(s["channel"])
+            self.set_data_rate(s["datarate"])
+            status = self.send_packet(packet)
+            if status and status.ack:
+                result = result + (s,)
+
+        return result
+    */
 
     public boolean scanSelected(int channel, int datarate, byte[] packet) {
         setDatarate(datarate);
@@ -410,11 +350,9 @@ public class Crazyradio {
         final byte[] rdata = new byte[64];
         mUsbInterface.sendControlTransfer(0x40, SCAN_CHANNELS, start, stop, NULL_PACKET);
         final int nfound = mUsbInterface.sendControlTransfer(0xc0, SCAN_CHANNELS, 0, 0, rdata);
-        if (nfound != 64) {
-            for (int i = 0; i < nfound; i++) {
-                result.add((int) rdata[i]);
-                mLogger.debug("Found channel: " + rdata[i]);
-            }
+        for (int i = 0; i < nfound; i++) {
+            result.add((int) rdata[i]);
+            mLogger.debug("Found channel: %s", rdata[i]);
         }
         return result;
     }
@@ -448,7 +386,7 @@ public class Crazyradio {
         return ackIn;
     }
 
-    public void sendVendorSetup(int request, int value, int index, byte[] data) {
+    private void sendVendorSetup(int request, int value, int index, byte[] data) {
         // usb.TYPE_VENDOR = 64 <=> 0x40
         int usbTypeVendor = 0x40;
         mUsbInterface.sendControlTransfer(usbTypeVendor, request, value, index, data);

@@ -28,6 +28,8 @@
 package se.bitcraze.crazyfliecontrol.prefs;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import se.bitcraze.crazyflie.lib.crazyradio.ConnectionData;
 import se.bitcraze.crazyflie.lib.crazyradio.Crazyradio;
@@ -610,7 +612,13 @@ public class PreferencesActivity extends PreferenceActivity {
                         if(firmwareVersion < 0.5){
                             useSlowScan = true;
                         }
-                        return crlink.scanChannels(useSlowScan);
+                        List<Integer> channels = crlink.scanChannels();
+                        ArrayList<ConnectionData> connections = new ArrayList<>(channels.size());
+                        for (Integer i :channels){
+                            connections.add(new ConnectionData(i,0));
+                        }
+                        return (ConnectionData[]) (connections.toArray());
+
                     } catch(IOException ioe) {
                         mException = ioe;
                         return new ConnectionData[0];

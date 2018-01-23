@@ -30,7 +30,7 @@ package se.bitcraze.crazyflie.lib.usb;
 import java.io.IOException;
 import java.util.List;
 
-import android.hardware.usb.UsbDevice;
+import javax.usb.UsbDevice;
 
 /**
  * Abstract USB interface to be independent of different implementations (eg. Java/Android)
@@ -87,7 +87,7 @@ public interface CrazyUsbInterface {
      * @param usbPid
      * @return
      */
-    public List<UsbDevice> findDevices(int usbVid, int usbPid);
+    public List findDevices(int usbVid, int usbPid);
 
     /**
      * Returns the firmware version of the USB device

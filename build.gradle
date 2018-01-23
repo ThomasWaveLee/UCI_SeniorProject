@@ -64,4 +64,5 @@ dependencies {
     compile files('libs/slf4j-android-1.6.1-RC1.jar')
     compile 'com.fasterxml.jackson.core:jackson-core:2.6.3'
     compile 'com.fasterxml.jackson.core:jackson-databind:2.6.3'
+    implementation files('libs/jsr80-1.0.1.jar')
 }

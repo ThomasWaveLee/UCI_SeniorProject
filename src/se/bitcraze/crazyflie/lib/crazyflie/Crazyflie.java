@@ -27,8 +27,6 @@
 
 package se.bitcraze.crazyflie.lib.crazyflie;
 
-import android.util.Log;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.Set;
@@ -38,7 +36,6 @@ import java.util.concurrent.LinkedBlockingDeque;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import se.bitcraze.crazyflie.lib.BleLink;
 import se.bitcraze.crazyflie.lib.crazyradio.ConnectionData;
 import se.bitcraze.crazyflie.lib.crazyradio.RadioDriver;
 import se.bitcraze.crazyflie.lib.crtp.CommanderPacket;
@@ -174,13 +171,6 @@ public class Crazyflie {
 
     //TODO: is this good enough?
     public boolean isConnected() {
-        // workaround for BleLink because it does not support Param and Logg subsystems yet
-        // TODO: this should be fixed somewhere else, because it adds a dependency to BLeLink
-
-        // THOMAS: since BLE downlink is complete, state gets set to setup_finished
-        //if (mDriver instanceof BleLink) {
-        //    return mState == State.CONNECTED;
-        //}
         return mState == State.SETUP_FINISHED;
     }
 
@@ -271,19 +261,11 @@ public class Crazyflie {
             mLogger.info("Initial packet has been received! => State.CONNECTED");
             this.mState = State.CONNECTED;
             //self.link_established.call(self.link_uri)
-
-            // THOMAS: Put in start-up
-            this.mDriver.notifyConnected();
-            startConnectionSetup();
-
-            // THOMAS: This hack made by the person was to stop BLE from finish set-up. We need to remove it.
-            /*
             //TODO: fix hacky-di-hack
             if (this.mDriver instanceof RadioDriver) {
                 this.mDriver.notifyConnected();
                 startConnectionSetup();
             }
-            */
         }
         //self.packet_received.remove_callback(self._check_for_initial_packet_cb)
         // => IncomingPacketHandler
@@ -328,10 +310,7 @@ public class Crazyflie {
         } else {
             //TODO: shortcut for BLELink
             mState = State.SETUP_FINISHED; //important, otherwise BLE keeps trying to reconnect
-            // THOMAS: This is needed to start receiving Param/Log packets. However the receivePackets isn't set-up
-            mLogg.refreshToc(loggTocFetchFinishedListener, mTocCache);
-            // THOMAS: This gets called at the end of call of refreshToc
-            //mDriver.notifySetupFinished();
+            mDriver.notifySetupFinished();
         }
 
         //TODO: self.mem.refresh(self._mems_updated_cb)
