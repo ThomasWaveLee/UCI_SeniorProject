@@ -176,9 +176,11 @@ public class Crazyflie {
     public boolean isConnected() {
         // workaround for BleLink because it does not support Param and Logg subsystems yet
         // TODO: this should be fixed somewhere else, because it adds a dependency to BLeLink
-        if (mDriver instanceof BleLink) {
-            return mState == State.CONNECTED;
-        }
+
+        // THOMAS: since BLE downlink is complete, state gets set to setup_finished
+        //if (mDriver instanceof BleLink) {
+        //    return mState == State.CONNECTED;
+        //}
         return mState == State.SETUP_FINISHED;
     }
 

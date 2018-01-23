@@ -175,27 +175,27 @@ public class BleLink extends CrtpDriver {
 		@Override
 		public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
 			super.onDescriptorWrite(gatt, descriptor, status);
-			mLogger.debug("On write called for descriptor: " + descriptor.getUuid().toString());
+			//mLogger.debug("On write called for descriptor: " + descriptor.getUuid().toString());
 			mWritten = true;
 		}
 
 		@Override
         public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
 			super.onCharacteristicRead(gatt, characteristic, status);
+			/*
 			mLogger.debug("On read call for characteristic: " + characteristic.getUuid().toString());
 			byte[] byteCode = characteristic.getValue();
 			mLogger.debug("Characteristic Values:\n");
 			for (byte i: byteCode) {
 				mLogger.debug(Integer.toHexString(i));
 			}
-			// THOMAS: this might not be needed. Trying to write BLE downlink
-			//mWritten = false;
+			*/
         }
 
 		@Override
 		public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
 			super.onCharacteristicChanged(gatt, characteristic);
-			mLogger.debug("On changed call for characteristic: " + characteristic.getUuid().toString());
+			//mLogger.debug("On changed call for characteristic: " + characteristic.getUuid().toString());
 			try {
 				byte[] data = characteristic.getValue();
 				if (data != null && data.length > 0) {
@@ -205,7 +205,7 @@ public class BleLink extends CrtpDriver {
 					mLogger.error("InterruptedException: " + e.getMessage());
 				return;
 			}
-			// Debug Print for whats being received
+			/* // Debug Print for whats being received
 			byte[] byteCode = characteristic.getValue();
 			mLogger.debug("Bytes Recieved: " + byteCode.length);
 			String binaryValue = "";
@@ -213,6 +213,7 @@ public class BleLink extends CrtpDriver {
                 binaryValue += Integer.toBinaryString(i);
 			}
             mLogger.debug("Characteristic Value: " + binaryValue);
+			*/
 		}
 	};
 
@@ -335,7 +336,8 @@ public class BleLink extends CrtpDriver {
 						mWritten = true;
 					}
                     mCrtpChar.setValue(pk.toByteArray());
-					/* // Debug prints to see whats being sent
+					 // Debug prints to see whats being sent
+					/*
 					String pkt = "";
 					for(byte i: pk.toByteArray()){
 						pkt += Integer.toBinaryString(i);
