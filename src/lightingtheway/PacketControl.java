@@ -6,9 +6,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.PriorityQueue;
 
 import se.bitcraze.crazyflie.lib.crazyflie.Crazyflie;
 import se.bitcraze.crazyflie.lib.crtp.CommanderPacket;
+import se.bitcraze.crazyflie.lib.crtp.CrtpPacket;
 import se.bitcraze.crazyflie.lib.crtp.HoverPacket;
 import se.bitcraze.crazyfliecontrol.controller.Controls;
 
@@ -17,17 +19,16 @@ public class PacketControl {
 
     final Logger mLogger = LoggerFactory.getLogger("PacketControl");
 
-    private Thread mPacketSender;
-
     private enum STATE {
-        GROUNDED, LIFTOFF, CALIBRATING, HOVER, MOVING, LANDING
+        GROUNDED, LIFTOFF, CALIBRATING, FLYING, LANDING
     }
 
     public STATE mState = STATE.GROUNDED;
 
-    private float mDeltaXThresh = 1.0f;
-    private float mDeltaYThresh = 18.0f;
-    private float mDeltaZThresh = 1.0f;
+    private float mVx = 0;
+    private float mVy = 0;
+    private float mYawRate = 0;
+    private float mZdistance = 0.1f;
 
     private float mRoll;
     private float mPitch;
@@ -40,33 +41,66 @@ public class PacketControl {
     private Crazyflie mCrazyFlie;
     private Controls mControls;
 
-    // Potentially want to look at previous commmandPackets sent.
-    // Hold up to historyLength of past packets
-    private static final int historyLength = 10;
-    private ArrayList<ArrayList<Object>> mHistory;
+    private PriorityQueue<CfCommand> mQueue = new PriorityQueue<>(20);
 
     public final static int absMaxThrust = 65535;
+    public final static int commandRate = 200;
 
     private float mLiftOffThrustControlFactor = .60f;
     private float mLiftOffThrust = mLiftOffThrustControlFactor * absMaxThrust;
     private float mHoverThrustControlFactor = .56f;
     private float mHoverThrust = mHoverThrustControlFactor * absMaxThrust;
 
+
+
+    private Thread mPacketSender = new Thread(new Runnable() {
+        @Override
+        public void run() {
+            CfCommand currentCommand = new CfCommand();
+            while (mCrazyFlie != null) {
+                float timeLeft = -1;
+                // If not grounded then look at queue
+                if (mState != STATE.GROUNDED) {
+                    // if we have no time left on current packet then look at nxt packet
+                    if (timeLeft < 0) {
+                        currentCommand = getNextCommand();
+                        // if nothing in queue then hover w/ deafult settings
+                        if (currentCommand == null) {
+                            mCrazyFlie.sendPacket(new HoverPacket(mVy, mVx, mYawRate, mZdistance));
+                        } else {
+                            mCrazyFlie.sendPacket(currentCommand.mHoverPacket);
+                            timeLeft = currentCommand.mTime;
+                        }
+                    } else {
+                        mCrazyFlie.sendPacket(currentCommand.mHoverPacket);
+                        timeLeft -= commandRate;
+                    }
+                }
+                try {
+                    Thread.sleep(commandRate);
+                } catch (InterruptedException e) {
+                    break;
+                }
+
+            }
+        }
+    });
+
     public PacketControl(){
+        mState = STATE.GROUNDED;
         mThrust = 0;
         mRoll = 0;
         mPitch = 0;
         mYaw = 0;
-        mHistory = new ArrayList<>();
         mThrust = mLiftOffThrust;
     }
 
     public PacketControl(Crazyflie cf, Controls control){
+        mState = STATE.GROUNDED;
         mThrust = 0;
         mRoll = 0;
         mPitch = 0;
         mYaw = 0;
-        mHistory = new ArrayList<>();
         mThrust = mLiftOffThrust;
         mCrazyFlie = cf;
         mMaxThrust = control.getMaxThrust();
@@ -86,21 +120,100 @@ public class PacketControl {
         mControls = control;
     }
 
-    public CommanderPacket getCurrentPacket(){
-        CommanderPacket cp = new CommanderPacket(mRoll, mPitch, mYaw, (char)((int)(mThrust)), mControls.isXmode());
-        ArrayList<Object> newEntry = new ArrayList<>();
-        newEntry.add(new Float(mRoll));
-        newEntry.add(new Float(mPitch));
-        newEntry.add(new Float(mYaw));
-        newEntry.add(new Character((char)((int)(mThrust))));
-        if (mHistory.size() < 10) {
-            mHistory.add(newEntry);
+    // Direction for Commands to send
+    public enum Direction{
+        LEFT,RIGHT,FORWARD,BACK,UP
+    }
+
+    private static final int MovePriority = 2;
+
+    public class CfCommand implements Comparable{
+
+        // time in ms
+        private float mTime;
+        private float mRemainingTime;
+        // used for priority queue to allow overrides
+        public int mPriority;
+        public HoverPacket mHoverPacket;
+
+        public CfCommand(){}
+
+        public CfCommand(Direction dir,float time, float velocity, float yawRate){
+            mPriority = MovePriority;
+            mTime = time;
+            mRemainingTime = time;
+            switch(dir) {
+                //  NOTE: The crazyflie sees "forward" as +x and "right" as +y
+                case FORWARD:
+                    mHoverPacket = new HoverPacket(-velocity,0,0,mZdistance);
+                    break;
+                case BACK:
+                    mHoverPacket = new HoverPacket(velocity,0,0,mZdistance);
+                    break;
+                case RIGHT:
+                    mHoverPacket = new HoverPacket(0,velocity,0,mZdistance);
+                    break;
+                case LEFT:
+                    mHoverPacket = new HoverPacket(0,-velocity,0,mZdistance);
+                    break;
+                case UP:
+                default:
+                    break;
+
+            }
         }
-        else {
-            mHistory.remove(0);
-            mHistory.add(newEntry);
+
+        // @param
+        public CfCommand(Direction dir,float time, float velocity, float yawRate, int priority){
+            this(dir,time,velocity,yawRate);
+            mPriority = priority;
         }
-        return cp;
+
+        public float decrementTime(float time){
+            mRemainingTime -= time;
+            return mRemainingTime;
+        }
+
+        public int compareTo(Object o){
+            if (o instanceof CfCommand){
+                int p = ((CfCommand)o).mPriority;
+                if (p > this.mPriority) return -1;
+                if (p < this.mPriority) return 1;
+                return 0;
+            }
+            return 0;
+        }
+
+        public boolean equals(Object o){
+            if (o instanceof CfCommand){
+                return this.mPriority == ((CfCommand)o).mPriority;
+            }
+            return false;
+        }
+    }
+
+    public boolean goRight(float time){
+        return addCommand(new CfCommand(Direction.RIGHT,time,mVx,0));
+    }
+
+    public boolean goLeft(float time){
+        return addCommand(new CfCommand(Direction.LEFT,time,mVx,0));
+    }
+
+    public boolean goForward(float time){
+        return addCommand(new CfCommand(Direction.FORWARD,time,mVx,0));
+    }
+
+    public boolean goBack(float time){
+        return addCommand(new CfCommand(Direction.BACK,time,mVx,0));
+    }
+
+    public boolean addCommand(CfCommand cmnd){
+        return mQueue.offer(cmnd);
+    }
+
+    public CfCommand getNextCommand(){
+        return mQueue.poll();
     }
 
     public void liftOff(){
@@ -117,21 +230,6 @@ public class PacketControl {
                 Thread.sleep(2000);
             } catch (Exception e) {}
 
-            mPacketSender = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    while (mCrazyFlie != null) {
-                        mCrazyFlie.sendPacket(new HoverPacket(0.0f,0.0f,0.0f,0.4f));
-                        //mCrazyFlie.sendPacket(new CommanderPacket(mRoll, mPitch, mYaw, (char) (mThrust), mControls.isXmode()));
-                        try {
-                            Thread.sleep(200);
-                        } catch (InterruptedException e) {
-                            break;
-                        }
-
-                    }
-                }
-            });
             mPacketSender.start();
             mThrust = mLiftOffThrust;
             try {
@@ -159,6 +257,10 @@ public class PacketControl {
             mPitch = 0;
             mRoll = 0;
             mThrust = 0.0f;
+            mVx = 0;
+            mVy = 0;
+            mZdistance = 0;
+            mYawRate = 0;
             mCrazyFlie.sendPacket(new CommanderPacket(0, 0, 0, (char) (0.0f), mControls.isXmode()));
         } else {
             mLogger.debug("[PacketControl]: Not Airborn!");
@@ -179,54 +281,19 @@ public class PacketControl {
         mThrust += thrust;
     }
 
-    private boolean checkLastCommand(){
-        ArrayList<Object> lastEntry = mHistory.get(mHistory.size()-1);
-        // iterate through the 4 values: roll,yaw,pitch.thrust
-        boolean zeroed = true;
-        // if all 4 values are zero then we know we are in a landed state
-        for(int i = 0; i < 4; i++) {
-            zeroed = zeroed && (lastEntry.get(i) == new Integer(0));
-        }
-        return zeroed;
+    public void incrementZDistance(float dZ) {
+        mZdistance += dZ;
+        mLogger.debug("ZDistance Set to: " + mZdistance);
     }
 
-    public void calibrateDriftXY(float deltaX, float deltaY){
-        if (mState != STATE.CALIBRATING)
-            return;
-        boolean calibrated = true;
-        if (deltaX > Math.abs(mDeltaXThresh)) {
-            calibrated = false;
-            if (deltaX > 0) {
-                setRoll(-1);
-            } else {
-                setRoll(1);
-            }
-        } else {
-            setRoll(0);
-        }
-        if (deltaY > Math.abs(mDeltaYThresh)) {
-            calibrated = false;
-            if (deltaY > 0) {
-                setPitch(-1);
-            } else {
-                setPitch(1);
-            }
-        } else {
-            setPitch(0);
-        }
-        if (calibrated){
-                mState = STATE.HOVER;
-        }
+    public void incrementVx(float dX){
+        mVx += dX;
+        mLogger.debug("Vx Set to: " + mVx);
     }
 
-    public void incrementDeltaXThresh(int dX) {
-        mDeltaXThresh += dX;
-        mLogger.debug("DeltaXThresh Set to: " + mDeltaXThresh);
-    }
-
-    public void incrementDeltaYThresh(int dY){
-        mDeltaYThresh += dY;
-        mLogger.debug("DeltaYThresh Set to: " + mDeltaYThresh);
+    public void incrementVy(float dY){
+        mVy += dY;
+        mLogger.debug("Vy Set to: " + mVy);
     }
 
     public void incrementLiftOffFactor(float change){
