@@ -323,49 +323,49 @@ public class MainActivity extends Activity {
         mDeltaXUpButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mPacketControl.incrementDeltaXThresh(1);
+                mPacketControl.incrementVx(0.1f);
             }
         });
         mDeltaXDownButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mPacketControl.incrementDeltaXThresh(-1);
+                mPacketControl.incrementVx(-0.1f);
             }
         });
         mDeltaYUpButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mPacketControl.incrementDeltaYThresh(1);
+                mPacketControl.incrementVy(0.1f);
             }
         });
         mDeltaYDownButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mPacketControl.incrementDeltaYThresh(-1);
+                mPacketControl.incrementVy(-0.1f);
             }
         });
         mLiftOffThreshUpButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mPacketControl.incrementLiftOffFactor(0.01f);
+                mPacketControl.incrementZDistance(0.1f);
             }
         });
         mLiftOffThreshDownButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mPacketControl.incrementLiftOffFactor(-0.01f);
+                mPacketControl.incrementZDistance(-0.1f);
             }
         });
         mHoverThreshUpButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mPacketControl.incrementHoverFactor(0.01f);
+                mPacketControl.incrementZDistance(0.1f);
             }
         });
         mHoverThreshDownButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mPacketControl.incrementHoverFactor(-0.01f);
+                mPacketControl.incrementZDistance(-0.1f);
             }
         });
 
@@ -956,7 +956,6 @@ public class MainActivity extends Activity {
                         setBatteryLevel(battery);
                         /*
                         if(mAutoFlightMode){
-                            mPacketControl.calibrateDriftXY(deltaX,deltaY);
                         }
                         */
                     }
