@@ -32,7 +32,7 @@
             android:layout_alignParentBottom="true"
             android:layout_toEndOf="@+id/button_calculate"
             android:layout_toRightOf="@+id/button_calculate"
-          
+
             android:gravity="center_horizontal|top"
             android:text="Main"
             tools:layout_editor_absoluteX="16dp"
