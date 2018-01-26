@@ -174,4 +174,13 @@
         android:layout_below="@+id/flightdataview">
     </com.MobileAnarchy.Android.Widgets.Joystick.DualJoystickView>
 
+    <Button
+        android:id="@+id/button_map"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@+id/button_ledRing"
+        android:layout_toLeftOf="@+id/linkQuality_text"
+        android:layout_toStartOf="@+id/linkQuality_text"
+        android:text="Map" />
+
 </RelativeLayout>

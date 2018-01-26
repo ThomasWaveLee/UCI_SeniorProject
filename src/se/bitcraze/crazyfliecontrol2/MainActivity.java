@@ -27,6 +27,38 @@
 
 package se.bitcraze.crazyfliecontrol2;
 
+import android.annotation.TargetApi;
+import android.app.Activity;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.SharedPreferences;
+import android.content.pm.ActivityInfo;
+import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.hardware.usb.UsbDevice;
+import android.hardware.usb.UsbManager;
+import android.media.AudioManager;
+import android.media.SoundPool;
+import android.media.SoundPool.OnLoadCompleteListener;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Environment;
+import android.os.Handler;
+import android.preference.PreferenceManager;
+import android.util.Log;
+import android.view.InputDevice;
+import android.view.KeyEvent;
+import android.view.MotionEvent;
+import android.view.View;
+import android.widget.Button;
+import android.widget.ImageButton;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import com.MobileAnarchy.Android.Widgets.Joystick.DualJoystickView;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -54,36 +86,6 @@ import se.bitcraze.crazyfliecontrol.controller.GyroscopeController;
 import se.bitcraze.crazyfliecontrol.controller.IController;
 import se.bitcraze.crazyfliecontrol.controller.TouchController;
 import se.bitcraze.crazyfliecontrol.prefs.PreferencesActivity;
-import android.annotation.TargetApi;
-import android.app.Activity;
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.SharedPreferences;
-import android.content.pm.ActivityInfo;
-import android.content.pm.PackageManager;
-import android.graphics.Color;
-import android.hardware.usb.UsbDevice;
-import android.hardware.usb.UsbManager;
-import android.media.AudioManager;
-import android.media.SoundPool;
-import android.media.SoundPool.OnLoadCompleteListener;
-import android.os.Build;
-import android.os.Bundle;
-import android.os.Environment;
-import android.os.Handler;
-import android.preference.PreferenceManager;
-import android.util.Log;
-import android.view.InputDevice;
-import android.view.KeyEvent;
-import android.view.MotionEvent;
-import android.view.View;
-import android.widget.ImageButton;
-import android.widget.TextView;
-import android.widget.Toast;
-
-import com.MobileAnarchy.Android.Widgets.Joystick.DualJoystickView;
 
 public class MainActivity extends Activity {
 
@@ -136,6 +138,8 @@ public class MainActivity extends Activity {
     private TextView mTextView_battery;
     private TextView mTextView_linkQuality;
 
+    private Button mapButton;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -172,6 +176,16 @@ public class MainActivity extends Activity {
         mHeadlightButton = (ImageButton) findViewById(R.id.button_headLight);
         mBuzzerSoundButton = (ImageButton) findViewById(R.id.button_buzzerSound);
 
+        //Acitivity switch button
+        mapButton = (Button) findViewById(R.id.button_map);
+        mapButton.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View v){
+                Intent intent = new Intent(MainActivity.this, MappingActivity.class);
+                startActivity(intent);
+            }
+        });
+
         IntentFilter filter = new IntentFilter();
         filter.addAction(this.getPackageName()+".USB_PERMISSION");
         filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
@@ -182,6 +196,7 @@ public class MainActivity extends Activity {
 
         setCacheDir();
     }
+
 
     private void initializeSounds() {
         this.setVolumeControlStream(AudioManager.STREAM_MUSIC);
@@ -941,4 +956,5 @@ public class MainActivity extends Activity {
     private String format(int identifier, Object o){
         return String.format(getResources().getString(identifier), o);
     }
+
 }
