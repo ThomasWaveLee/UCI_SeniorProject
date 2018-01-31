@@ -25,10 +25,16 @@ public class PacketControl {
 
     public STATE mState = STATE.GROUNDED;
 
+    public final static int absMaxThrust = 65535;
+    // period in ms at which to send packet to crazyflie
+    public final static int gCommandRate = 100;
+    // base height to hover at
+    public final static float gBaseHeight = 0.1f;
+
     private float mVx = 0;
     private float mVy = 0;
     private float mYawRate = 0;
-    private float mZdistance = 0.1f;
+    private float mZdistance = gBaseHeight;
 
     private float mRoll;
     private float mPitch;
@@ -43,48 +49,13 @@ public class PacketControl {
 
     private PriorityQueue<CfCommand> mQueue = new PriorityQueue<>(20);
 
-    public final static int absMaxThrust = 65535;
-    public final static int commandRate = 200;
-
     private float mLiftOffThrustControlFactor = .60f;
     private float mLiftOffThrust = mLiftOffThrustControlFactor * absMaxThrust;
     private float mHoverThrustControlFactor = .56f;
     private float mHoverThrust = mHoverThrustControlFactor * absMaxThrust;
 
-
-
-    private Thread mPacketSender = new Thread(new Runnable() {
-        @Override
-        public void run() {
-            CfCommand currentCommand = new CfCommand();
-            while (mCrazyFlie != null) {
-                float timeLeft = -1;
-                // If not grounded then look at queue
-                if (mState != STATE.GROUNDED) {
-                    // if we have no time left on current packet then look at nxt packet
-                    if (timeLeft < 0) {
-                        currentCommand = getNextCommand();
-                        // if nothing in queue then hover w/ deafult settings
-                        if (currentCommand == null) {
-                            mCrazyFlie.sendPacket(new HoverPacket(mVy, mVx, mYawRate, mZdistance));
-                        } else {
-                            mCrazyFlie.sendPacket(currentCommand.mHoverPacket);
-                            timeLeft = currentCommand.mTime;
-                        }
-                    } else {
-                        mCrazyFlie.sendPacket(currentCommand.mHoverPacket);
-                        timeLeft -= commandRate;
-                    }
-                }
-                try {
-                    Thread.sleep(commandRate);
-                } catch (InterruptedException e) {
-                    break;
-                }
-
-            }
-        }
-    });
+    // Thread to run when set to auto flight
+    private Thread mPacketSender;
 
     public PacketControl(){
         mState = STATE.GROUNDED;
@@ -127,11 +98,11 @@ public class PacketControl {
 
     private static final int MovePriority = 2;
 
+    // internal class to hold HoverPacket and time info
     public class CfCommand implements Comparable{
 
         // time in ms
         private float mTime;
-        private float mRemainingTime;
         // used for priority queue to allow overrides
         public int mPriority;
         public HoverPacket mHoverPacket;
@@ -141,14 +112,13 @@ public class PacketControl {
         public CfCommand(Direction dir,float time, float velocity, float yawRate){
             mPriority = MovePriority;
             mTime = time;
-            mRemainingTime = time;
             switch(dir) {
                 //  NOTE: The crazyflie sees "forward" as +x and "right" as +y
                 case FORWARD:
-                    mHoverPacket = new HoverPacket(-velocity,0,0,mZdistance);
+                    mHoverPacket = new HoverPacket(velocity,0,0,mZdistance);
                     break;
                 case BACK:
-                    mHoverPacket = new HoverPacket(velocity,0,0,mZdistance);
+                    mHoverPacket = new HoverPacket(-velocity,0,0,mZdistance);
                     break;
                 case RIGHT:
                     mHoverPacket = new HoverPacket(0,velocity,0,mZdistance);
@@ -158,20 +128,15 @@ public class PacketControl {
                     break;
                 case UP:
                 default:
+                    mHoverPacket = new HoverPacket(0,0,0,mZdistance);
                     break;
 
             }
         }
 
-        // @param
         public CfCommand(Direction dir,float time, float velocity, float yawRate, int priority){
             this(dir,time,velocity,yawRate);
             mPriority = priority;
-        }
-
-        public float decrementTime(float time){
-            mRemainingTime -= time;
-            return mRemainingTime;
         }
 
         public int compareTo(Object o){
@@ -190,22 +155,51 @@ public class PacketControl {
             }
             return false;
         }
+
+        public String toString(){
+            return mHoverPacket + "; Time: " + mTime + "; Priority: " + mPriority;
+        }
     }
+    // End of internal class
 
     public boolean goRight(float time){
-        return addCommand(new CfCommand(Direction.RIGHT,time,mVx,0));
+        return addCommand(new CfCommand(Direction.RIGHT,time,mVy,0));
+    }
+
+    public boolean goRight(float dist, float vx){
+        float time = toMS(dist/vx);
+        return addCommand(new CfCommand(Direction.RIGHT,time,vx,0));
     }
 
     public boolean goLeft(float time){
-        return addCommand(new CfCommand(Direction.LEFT,time,mVx,0));
+        return addCommand(new CfCommand(Direction.LEFT,time,mVy,0));
+    }
+
+    public boolean goLeft(float dist, float vx){
+        float time = dist/vx * 1000;
+        return addCommand(new CfCommand(Direction.LEFT,time,vx,0));
     }
 
     public boolean goForward(float time){
         return addCommand(new CfCommand(Direction.FORWARD,time,mVx,0));
     }
 
+    public boolean goForward(float dist, float vx){
+        float time = toMS(dist/vx);
+        return addCommand(new CfCommand(Direction.FORWARD,time,vx,0));
+    }
+
     public boolean goBack(float time){
         return addCommand(new CfCommand(Direction.BACK,time,mVx,0));
+    }
+
+    public boolean goBack(float dist, float vx){
+        float time = toMS(dist/vx);
+        return addCommand(new CfCommand(Direction.BACK,time,vx,0));
+    }
+
+    public float toMS(float sec){
+        return sec * 1000;
     }
 
     public boolean addCommand(CfCommand cmnd){
@@ -219,6 +213,40 @@ public class PacketControl {
     public void liftOff(){
         if (mState == STATE.GROUNDED){
             mLogger.debug("[PacketControl]: liftOff Called!");
+            mPacketSender = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    // init for compiler
+                    CfCommand currentCommand = new CfCommand();
+                    float timeLeft = -1;
+                    while (mCrazyFlie != null) {
+                        // If not grounded then look at queue
+                        if (mState != STATE.GROUNDED) {
+                            // if we have no time left on current packet then look at nxt packet
+                            if (timeLeft < 0) {
+                                currentCommand = getNextCommand();
+                                // if nothing in queue then hover w/ default settings
+                                if (currentCommand == null) {
+                                    mCrazyFlie.sendPacket(new HoverPacket(mVy, mVx, mYawRate, mZdistance));
+                                } else {
+                                    mCrazyFlie.sendPacket(currentCommand.mHoverPacket);
+                                    timeLeft = currentCommand.mTime;
+                                }
+                            } else {
+                                mCrazyFlie.sendPacket(currentCommand.mHoverPacket);
+                                timeLeft -= gCommandRate;
+                                mLogger.debug(currentCommand + " , TimeLeft: " + timeLeft);
+                            }
+                        }
+                        try {
+                            Thread.sleep(gCommandRate);
+                        } catch (InterruptedException e) {
+                            break;
+                        }
+                    }
+                }
+            });
+            /*
             mState = STATE.LIFTOFF;
             mThrust = mLiftOffThrust / 2.0f;
             mCrazyFlie.setParamValue("kalman.resetEstimation",1);
@@ -229,17 +257,9 @@ public class PacketControl {
             try {
                 Thread.sleep(2000);
             } catch (Exception e) {}
-
+            */
             mPacketSender.start();
-            mThrust = mLiftOffThrust;
-            try {
-                Thread.sleep(25);
-                mThrust = mHoverThrust;
-                mState = STATE.CALIBRATING;
-            } catch (InterruptedException e) {
-                mThrust = 0;
-            }
-            //mCrazyFlie.setParamValue("flightmode.althold",1);
+            mState = STATE.FLYING;
 
         } else {
             mLogger.debug("[PacketControl]: Not Grounded!");
@@ -249,7 +269,6 @@ public class PacketControl {
     public void land(){
         if (mState != STATE.GROUNDED){
             mLogger.debug("[PacketControl]: land Called!");
-            mState = STATE.GROUNDED;
             mPacketSender.interrupt();
             mPacketSender = null;
 
@@ -259,9 +278,16 @@ public class PacketControl {
             mThrust = 0.0f;
             mVx = 0;
             mVy = 0;
-            mZdistance = 0;
+            mZdistance = gBaseHeight;
             mYawRate = 0;
+            mQueue.clear();
+            mCrazyFlie.sendPacket(new HoverPacket(0,0,0,gBaseHeight));
+            try{
+                Thread.sleep(gCommandRate);
+            } catch (Exception e) {}
+
             mCrazyFlie.sendPacket(new CommanderPacket(0, 0, 0, (char) (0.0f), mControls.isXmode()));
+            mState = STATE.GROUNDED;
         } else {
             mLogger.debug("[PacketControl]: Not Airborn!");
         }
@@ -294,6 +320,11 @@ public class PacketControl {
     public void incrementVy(float dY){
         mVy += dY;
         mLogger.debug("Vy Set to: " + mVy);
+    }
+
+    public void incrementYawRate(float dY){
+        mYawRate += dY;
+        mLogger.debug("YawRate Set to: " + mYawRate);
     }
 
     public void incrementLiftOffFactor(float change){

@@ -323,25 +323,29 @@ public class MainActivity extends Activity {
         mDeltaXUpButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mPacketControl.incrementVx(0.1f);
+               // mPacketControl.incrementVx(0.1f);
+                mPacketControl.goRight(.5f,.1f);
             }
         });
         mDeltaXDownButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mPacketControl.incrementVx(-0.1f);
+                //mPacketControl.incrementVx(-0.1f);
+                mPacketControl.goLeft(.5f,.1f);
             }
         });
         mDeltaYUpButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mPacketControl.incrementVy(0.1f);
+                //mPacketControl.incrementVy(0.1f);
+                mPacketControl.goForward(.5f,.1f);
             }
         });
         mDeltaYDownButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mPacketControl.incrementVy(-0.1f);
+                //mPacketControl.incrementVy(-0.1f);
+                mPacketControl.goBack(.5f,.1f);
             }
         });
         mLiftOffThreshUpButton.setOnClickListener(new View.OnClickListener() {
@@ -359,13 +363,13 @@ public class MainActivity extends Activity {
         mHoverThreshUpButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mPacketControl.incrementZDistance(0.1f);
+                mPacketControl.incrementYawRate(1.0f);
             }
         });
         mHoverThreshDownButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mPacketControl.incrementZDistance(-0.1f);
+                mPacketControl.incrementYawRate(-1.0f);
             }
         });
 
