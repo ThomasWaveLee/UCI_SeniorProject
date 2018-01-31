@@ -150,4 +150,14 @@
         android:textSize="32sp"
         android:text="Lighting the Way" />
 
+    <Button
+        android:id="@+id/button_map"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/button_buzzerSound"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="36dp"
+        android:text="Map" />
+
+
 </RelativeLayout>
