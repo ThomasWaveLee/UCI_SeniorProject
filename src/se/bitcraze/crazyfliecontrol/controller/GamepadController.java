@@ -139,7 +139,7 @@ public class GamepadController extends AbstractController {
                 // workaround until BleLink supports param subsystem
                 if (mActivity.getCrazyflie() != null && mActivity.getCrazyflie().getDriver() instanceof RadioDriver) {
                     mHover = true;
-                    mActivity.enableAltHoldMode(mHover);
+                    //mActivity.enableAltHoldMode(mHover);
                 }
             }
             break;
@@ -148,7 +148,7 @@ public class GamepadController extends AbstractController {
                 // workaround until BleLink supports param subsystem
                 if (mActivity.getCrazyflie() != null && mActivity.getCrazyflie().getDriver() instanceof RadioDriver) {
                     mHover = false;
-                    mActivity.enableAltHoldMode(mHover);
+                    //mActivity.enableAltHoldMode(mHover);
                 }
             }
             break;

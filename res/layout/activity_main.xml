@@ -1,7 +1,7 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent" >
+    android:layout_height="match_parent">
 
     <!-- HEADER start -->
     <ImageView
@@ -63,37 +63,29 @@
         android:id="@+id/imageButton_connect"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:layout_toLeftOf="@+id/imageButton_settings"
-        android:layout_toStartOf="@+id/imageButton_settings"
-        android:layout_marginBottom="5dp"
-        android:layout_marginLeft="10dp"
-        android:layout_marginStart="10dp"
-        android:layout_marginRight="6dp"
-        android:layout_marginEnd="6dp"
-        android:layout_marginTop="5dp"
+        android:layout_alignTop="@+id/button_ramp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginStart="20dp"
+        android:layout_toEndOf="@+id/button_ramp"
+        android:layout_toRightOf="@+id/button_ramp"
         android:background="@drawable/custom_button"
-        android:src="@drawable/ic_action_import_export"
+        android:contentDescription="@string/menu_connect_ContentDescription"
         android:elevation="2dp"
-        android:contentDescription="@string/menu_connect_ContentDescription"/>
+        android:src="@drawable/ic_action_import_export" />
 
     <ImageButton
         android:id="@+id/imageButton_settings"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentEnd="true"
-        android:layout_marginBottom="5dp"
-        android:layout_marginLeft="6dp"
-        android:layout_marginStart="6dp"
-        android:layout_marginRight="10dp"
-        android:layout_marginEnd="10dp"
-        android:layout_marginTop="5dp"
+        android:layout_alignTop="@+id/imageButton_connect"
+        android:layout_marginLeft="20dp"
+        android:layout_marginStart="20dp"
+        android:layout_toEndOf="@+id/imageButton_connect"
+        android:layout_toRightOf="@+id/imageButton_connect"
         android:background="@drawable/custom_button"
-        android:src="@drawable/ic_action_settings_light"
+        android:contentDescription="@string/menu_preferences_ContentDescription"
         android:elevation="2dp"
-        android:contentDescription="@string/menu_preferences_ContentDescription"/>
+        android:src="@drawable/ic_action_settings_light" />
 
     <!-- HEADER end -->
 
@@ -101,68 +93,27 @@
         android:id="@+id/button_ramp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginLeft="6dp"
-        android:layout_marginRight="6dp"
-        android:layout_marginTop="5dp"
-        android:layout_alignParentTop="true"
-        android:layout_toLeftOf="@id/imageButton_connect"
+        android:layout_above="@+id/joysticks"
         android:layout_centerHorizontal="true"
+        android:layout_marginBottom="50dp"
         android:background="@drawable/custom_button"
-        android:src="@drawable/ic_action_settings_light"
+        android:contentDescription="@string/button_ramp_contentDescription"
         android:elevation="2dp"
-        android:contentDescription="@string/button_ramp_contentDescription"/>
-
-    <ImageButton
-        android:id="@+id/button_ledRing"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginLeft="6dp"
-        android:layout_marginRight="6dp"
-        android:layout_alignBottom="@+id/button_headLight"
-        android:layout_toLeftOf="@id/button_headLight"
-        android:layout_toStartOf="@id/button_headLight"
-        android:background="@drawable/custom_button_action"
-        android:src="@drawable/ic_led_ring"
-        android:elevation="2dp"
-        android:onClick="switchLedRingEffect"
-        android:contentDescription="@string/button_ledring_contentDescription"/>
-
-    <ImageButton
-        android:id="@+id/button_headLight"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginLeft="6dp"
-        android:layout_marginRight="6dp"
-        android:layout_below="@+id/imageButton_settings"
-        android:layout_centerHorizontal="true"
-        android:background="@drawable/custom_button_action"
-        android:src="@drawable/ic_headlight"
-        android:elevation="2dp"
-        android:onClick="toggleHeadlight"
-        android:contentDescription="@string/button_headlight_contentDescription"/>
+        android:src="@drawable/ic_action_settings_light" />
 
     <ImageButton
         android:id="@+id/button_buzzerSound"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginLeft="6dp"
-        android:layout_marginRight="6dp"
-        android:layout_alignBottom="@+id/button_headLight"
-        android:layout_toRightOf="@id/button_headLight"
-        android:layout_toEndOf="@id/button_headLight"
+        android:layout_above="@+id/button_ramp"
+        android:layout_alignLeft="@+id/button_ramp"
+        android:layout_alignStart="@+id/button_ramp"
+        android:layout_marginBottom="117dp"
         android:background="@drawable/custom_button_action"
-        android:src="@drawable/ic_volume_up_black"
+        android:contentDescription="@string/button_buzzer_contentDescription"
         android:elevation="2dp"
         android:onClick="playBuzzerSound"
-        android:contentDescription="@string/button_buzzer_contentDescription"/>
-
-    <se.bitcraze.crazyfliecontrol2.FlightDataView
-        android:id="@+id/flightdataview"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:layout_centerHorizontal="true"
-        android:layout_below="@+id/button_buzzerSound" />
+        android:src="@drawable/ic_volume_up_black" />
 
     <com.MobileAnarchy.Android.Widgets.Joystick.DualJoystickView
         android:id="@+id/joysticks"
@@ -170,8 +121,33 @@
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:gravity="bottom"
-        android:layout_marginTop="1dp"
-        android:layout_below="@+id/flightdataview">
+        android:layout_marginTop="1dp">
     </com.MobileAnarchy.Android.Widgets.Joystick.DualJoystickView>
+
+    <SeekBar
+        android:id="@+id/distBar"
+        android:layout_width="250dp"
+        android:layout_height="wrap_content"
+        android:layout_above="@id/button_ramp"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="50dp" />
+
+    <TextView
+        android:id="@+id/distText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_above="@+id/distBar"
+        android:layout_marginBottom="10dp" />
+
+    <TextView
+        android:id="@+id/title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@+id/linkQuality_text"
+        android:layout_marginTop="40dp"
+        android:textSize="32sp"
+        android:text="Lighting the Way" />
 
 </RelativeLayout>

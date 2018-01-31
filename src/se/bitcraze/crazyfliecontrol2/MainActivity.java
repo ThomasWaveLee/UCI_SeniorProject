@@ -80,6 +80,7 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageButton;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -90,7 +91,7 @@ public class MainActivity extends Activity {
     private static final String LOG_TAG = "CrazyflieControl";
 
     private DualJoystickView mDualJoystickView;
-    private FlightDataView mFlightDataView;
+    //private FlightDataView mFlightDataView;
 
     private Crazyflie mCrazyflie;
     private CrtpDriver mDriver;
@@ -127,14 +128,17 @@ public class MainActivity extends Activity {
     private int mRingEffect = 0;
     private int mNoRingEffect = 0;
     private int mCpuFlash = 0;
-    private ImageButton mRingEffectButton;
-    private ImageButton mHeadlightButton;
+    //private ImageButton mRingEffectButton;
+    //private ImageButton mHeadlightButton;
     private ImageButton mBuzzerSoundButton;
     private ImageButton mRampButton;
     private File mCacheDir;
 
     private TextView mTextView_battery;
     private TextView mTextView_linkQuality;
+
+    private SeekBar distBar;
+    private TextView dist;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -165,12 +169,17 @@ public class MainActivity extends Activity {
         mRampButton = (ImageButton) findViewById(R.id.button_ramp);
         initializeMenuButtons();
 
-        mFlightDataView = (FlightDataView) findViewById(R.id.flightdataview);
+        //mFlightDataView = (FlightDataView) findViewById(R.id.flightdataview);
 
         //action buttons
-        mRingEffectButton = (ImageButton) findViewById(R.id.button_ledRing);
-        mHeadlightButton = (ImageButton) findViewById(R.id.button_headLight);
+        //mRingEffectButton = (ImageButton) findViewById(R.id.button_ledRing);
+        //mHeadlightButton = (ImageButton) findViewById(R.id.button_headLight);
         mBuzzerSoundButton = (ImageButton) findViewById(R.id.button_buzzerSound);
+
+        //distance bar
+        distBar = (SeekBar) findViewById(R.id.distBar);
+        dist = (TextView) findViewById(R.id.distText);
+        initializeSeekBar();
 
         IntentFilter filter = new IntentFilter();
         filter.addAction(this.getPackageName()+".USB_PERMISSION");
@@ -228,11 +237,13 @@ public class MainActivity extends Activity {
 
     private void checkScreenLock() {
         boolean isScreenLock = mPreferences.getBoolean(PreferencesActivity.KEY_PREF_SCREEN_ROTATION_LOCK_BOOL, false);
+        /*
         if(isScreenLock){
             this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         }else{
             this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
         }
+        */
     }
 
     private void initializeMenuButtons() {
@@ -287,6 +298,27 @@ public class MainActivity extends Activity {
         });
     }
 
+    private void initializeSeekBar(){
+        distBar.setProgress(50);
+        dist.setText("50");
+        distBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                dist.setText(String.valueOf(new Integer(progress)));
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
+    }
+
     @Override
     public void onResume() {
         super.onResume();
@@ -298,8 +330,8 @@ public class MainActivity extends Activity {
         resetInputMethod();
         checkScreenLock();
         //disable action buttons
-        mRingEffectButton.setEnabled(false);
-        mHeadlightButton.setEnabled(false);
+        //mRingEffectButton.setEnabled(false);
+        //mHeadlightButton.setEnabled(false);
         mBuzzerSoundButton.setEnabled(false);
         mRampButton.setEnabled(false);
         if (mPreferences.getBoolean(PreferencesActivity.KEY_PREF_IMMERSIVE_MODE_BOOL, false)) {
@@ -380,7 +412,7 @@ public class MainActivity extends Activity {
 
     //TODO: fix indirection
     public void updateFlightData(){
-        mFlightDataView.updateFlightData(mController.getPitch(), mController.getRoll(), mController.getThrust(), mController.getYaw());
+        //mFlightDataView.updateFlightData(mController.getPitch(), mController.getRoll(), mController.getThrust(), mController.getYaw());
     }
 
     @Override
@@ -566,8 +598,8 @@ public class MainActivity extends Activity {
                             runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    mRingEffectButton.setEnabled(true);
-                                    mHeadlightButton.setEnabled(true);
+                                    //mRingEffectButton.setEnabled(true);
+                                    //mHeadlightButton.setEnabled(true);
                                 }
                             });
                         }
@@ -627,8 +659,8 @@ public class MainActivity extends Activity {
                     Toast.makeText(getApplicationContext(), "Disconnected", Toast.LENGTH_SHORT).show();
                     mToggleConnectButton.setBackgroundDrawable(getResources().getDrawable(R.drawable.custom_button));
                     //disable action buttons after disconnect
-                    mRingEffectButton.setEnabled(false);
-                    mHeadlightButton.setEnabled(false);
+                    //mRingEffectButton.setEnabled(false);
+                    //mHeadlightButton.setEnabled(false);
                     mBuzzerSoundButton.setEnabled(false);
                     mRampButton.setEnabled(false);
                     setBatteryLevel(-1.0f);
@@ -800,7 +832,7 @@ public class MainActivity extends Activity {
                 // Toggle LED ring headlight
                 mHeadlightToggle = !mHeadlightToggle;
                 mCrazyflie.setParamValue(action, mHeadlightToggle ? 1 : 0);
-                mHeadlightButton.setColorFilter(mHeadlightToggle ? Color.parseColor("#00FF00") : Color.BLACK);
+                //mHeadlightButton.setColorFilter(mHeadlightToggle ? Color.parseColor("#00FF00") : Color.BLACK);
             } else if ("ring.effect".equalsIgnoreCase(action)) {
                 // Cycle through LED ring effects
                 Log.i(LOG_TAG, "Ring effect: " + mRingEffect);

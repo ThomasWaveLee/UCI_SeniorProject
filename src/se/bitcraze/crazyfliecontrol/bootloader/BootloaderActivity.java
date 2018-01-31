@@ -100,7 +100,7 @@ public class BootloaderActivity extends Activity {
         mConsoleTextView = (TextView) findViewById(R.id.bootloader_statusLine);
         mProgressBar = (ProgressBar) findViewById(R.id.bootloader_progressBar);
 
-        this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+        //this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
 
         initializeFirmwareSpinner();
 

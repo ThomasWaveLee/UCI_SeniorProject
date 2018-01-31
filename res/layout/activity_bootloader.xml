@@ -23,12 +23,12 @@
         android:layout_height="wrap_content"
         android:layout_alignParentTop="false"
         android:layout_below="@id/bootloader_title"
-        android:orientation="horizontal"
+        android:orientation="vertical"
         android:paddingBottom="10dp" >
         
         <Spinner
             android:id="@+id/bootloader_firmwareSpinner"
-            android:layout_width="0dp"
+            android:layout_width="1dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:layout_gravity="bottom"

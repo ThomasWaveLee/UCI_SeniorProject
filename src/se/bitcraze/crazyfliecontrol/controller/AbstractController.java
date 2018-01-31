@@ -50,7 +50,7 @@ public abstract class AbstractController implements IController {
 
 	public void enable(){
 		mIsDisabled = false;
-        Toast.makeText(mActivity, "Using " + getControllerName(), Toast.LENGTH_SHORT).show();
+        //Toast.makeText(mActivity, "Using " + getControllerName(), Toast.LENGTH_SHORT).show();
 	}
 
     public void disable() {
