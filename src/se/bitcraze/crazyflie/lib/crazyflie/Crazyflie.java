@@ -36,7 +36,6 @@ import java.util.concurrent.LinkedBlockingDeque;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import se.bitcraze.crazyflie.lib.BleLink;
 import se.bitcraze.crazyflie.lib.crazyradio.ConnectionData;
 import se.bitcraze.crazyflie.lib.crazyradio.RadioDriver;
 import se.bitcraze.crazyflie.lib.crtp.CommanderPacket;
@@ -172,11 +171,6 @@ public class Crazyflie {
 
     //TODO: is this good enough?
     public boolean isConnected() {
-        // workaround for BleLink because it does not support Param and Logg subsystems yet
-        // TODO: this should be fixed somewhere else, because it adds a dependency to BLeLink
-        if (mDriver instanceof BleLink) {
-            return mState == State.CONNECTED;
-        }
         return mState == State.SETUP_FINISHED;
     }
 

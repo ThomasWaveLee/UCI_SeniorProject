@@ -60,6 +60,8 @@ import android.widget.Toast;
 
 import com.MobileAnarchy.Android.Widgets.Joystick.DualJoystickView;
 
+import lightingtheway.PacketControl;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -95,13 +97,15 @@ public class MainActivity extends Activity {
     private DualJoystickView mDualJoystickView;
     //private FlightDataView mFlightDataView;
 
+    private PacketControl mPacketControl;
+
     private Crazyflie mCrazyflie;
     private CrtpDriver mDriver;
     private Toc mParamToc;
     private Toc mLogToc;
 
     private Logg mLogg;
-    private LogConfig mLogConfigStandard = new LogConfig("Standard", 1000);
+    private LogConfig mLogConfigStandard = new LogConfig("Standard", 200);
 
     private SharedPreferences mPreferences;
 
@@ -114,6 +118,8 @@ public class MainActivity extends Activity {
     private boolean mDoubleBackToExitPressedOnce = false;
 
     private Thread mSendJoystickDataThread;
+    private Thread mAutoFlightThread;
+    private boolean mAutoFlightMode = false;
 
     private Controls mControls;
 
@@ -132,8 +138,19 @@ public class MainActivity extends Activity {
     private int mCpuFlash = 0;
     //private ImageButton mRingEffectButton;
     //private ImageButton mHeadlightButton;
+
+    private ImageButton mRingEffectButton;
+    private ImageButton mHeadlightButton;
     private ImageButton mBuzzerSoundButton;
     private ImageButton mRampButton;
+    private ImageButton mDeltaXUpButton;
+    private ImageButton mDeltaXDownButton;
+    private ImageButton mDeltaYUpButton;
+    private ImageButton mDeltaYDownButton;
+    private ImageButton mLiftOffThreshUpButton;
+    private ImageButton mLiftOffThreshDownButton;
+    private ImageButton mHoverThreshUpButton;
+    private ImageButton mHoverThreshDownButton;
     private File mCacheDir;
 
     private TextView mTextView_battery;
@@ -160,6 +177,8 @@ public class MainActivity extends Activity {
         mControls = new Controls(this, mPreferences);
         mControls.setDefaultPreferenceValues(getResources());
 
+        mPacketControl = new PacketControl();
+
         //Default controller
         mDualJoystickView = (DualJoystickView) findViewById(R.id.joysticks);
         mController = new TouchController(mControls, this, mDualJoystickView);
@@ -173,6 +192,18 @@ public class MainActivity extends Activity {
         mRampButton = (ImageButton) findViewById(R.id.button_ramp);
         initializeMenuButtons();
 
+        // testing tweak buttons
+        mDeltaXUpButton = (ImageButton) findViewById(R.id.button_deltaXUp);
+        mDeltaXDownButton = (ImageButton) findViewById(R.id.button_deltaXDown);
+        mDeltaYUpButton = (ImageButton) findViewById(R.id.button_deltaYUp);
+        mDeltaYDownButton = (ImageButton) findViewById(R.id.button_deltaYDown);
+        mLiftOffThreshUpButton = (ImageButton) findViewById(R.id.button_LiftOffUp);
+        mLiftOffThreshDownButton = (ImageButton) findViewById(R.id.button_LiftOffDown);
+        mHoverThreshUpButton = (ImageButton) findViewById(R.id.button_HoverUp);
+        mHoverThreshDownButton = (ImageButton) findViewById(R.id.button_HoverDown);
+        intitializeTestingButtons();
+
+        mFlightDataView = (FlightDataView) findViewById(R.id.flightdataview);
         //mFlightDataView = (FlightDataView) findViewById(R.id.flightdataview);
 
         //action buttons
@@ -262,7 +293,6 @@ public class MainActivity extends Activity {
 
     private void initializeMenuButtons() {
         mToggleConnectButton.setOnClickListener(new View.OnClickListener() {
-
             @Override
             public void onClick(View v) {
                 Log.d(LOG_TAG, "Connect Button Clicked");
@@ -289,14 +319,13 @@ public class MainActivity extends Activity {
         });
 
         mRampButton.setOnClickListener(new View.OnClickListener() {
-
             @Override
             public void onClick(View v) {
                 Log.d(LOG_TAG, "RampButton clicked");
-                if (mCrazyflie != null && mCrazyflie.isConnected())
+                if (mCrazyflie != null) {
                     if (!mRampToggle) {
                         Log.d(LOG_TAG, "Ramp - start");
-                        if(mSendJoystickDataThread != null) {
+                        if (mSendJoystickDataThread != null) {
                             mSendJoystickDataThread.interrupt();
                             mSendJoystickDataThread = null;
                         }
@@ -307,7 +336,11 @@ public class MainActivity extends Activity {
                         mRampButton.setBackgroundDrawable(getResources().getDrawable(R.drawable.custom_button));
                         startLandSequence();
                     }
-                mRampToggle = !mRampToggle;
+                    mRampToggle = !mRampToggle;
+                } else {
+                    Log.d(LOG_TAG, "Thinks crazyflie is null or not connected");
+                }
+
             }
         });
     }
@@ -331,6 +364,73 @@ public class MainActivity extends Activity {
 
             }
         });
+    }
+
+    public void intitializeTestingButtons(){
+
+        // testing tweak buttons
+        mDeltaXUpButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+               // mPacketControl.incrementVx(0.1f);
+                mPacketControl.goRight(.5f,.1f);
+            }
+        });
+        mDeltaXDownButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                //mPacketControl.incrementVx(-0.1f);
+                mPacketControl.goLeft(.5f,.1f);
+            }
+        });
+        mDeltaYUpButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                //mPacketControl.incrementVy(0.1f);
+                mPacketControl.goForward(.5f,.1f);
+            }
+        });
+        mDeltaYDownButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                //mPacketControl.incrementVy(-0.1f);
+                mPacketControl.goBack(.5f,.1f);
+            }
+        });
+        mLiftOffThreshUpButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mPacketControl.incrementZDistance(0.1f);
+            }
+        });
+        mLiftOffThreshDownButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mPacketControl.incrementZDistance(-0.1f);
+            }
+        });
+        mHoverThreshUpButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mPacketControl.incrementYawRate(1.0f);
+            }
+        });
+        mHoverThreshDownButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mPacketControl.incrementYawRate(-1.0f);
+            }
+        });
+
+        mDeltaXUpButton.setEnabled(true);
+        mDeltaXDownButton.setEnabled(true);
+        mDeltaYUpButton.setEnabled(true);
+        mDeltaYDownButton.setEnabled(true);
+        mLiftOffThreshUpButton.setEnabled(true);
+        mLiftOffThreshDownButton.setEnabled(true);
+        mHoverThreshUpButton.setEnabled(true);
+        mHoverThreshDownButton.setEnabled(true);
+
     }
 
     @Override
@@ -550,20 +650,22 @@ public class MainActivity extends Activity {
             });
         }
 
-        // THOMAS: This one is called
         @Override
         public void connected(String connectionInfo) {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    Toast.makeText(getApplicationContext(), "Connected", Toast.LENGTH_SHORT).show();
                     if (mCrazyflie != null && mCrazyflie.getDriver() instanceof BleLink) {
+                        Toast.makeText(getApplicationContext(), "Connected With BLE", Toast.LENGTH_SHORT).show();
                         mToggleConnectButton.setBackgroundDrawable(getResources().getDrawable(R.drawable.custom_button_connected_ble));
-                        // TODO: Remove this once BleLink supports Param and Logg subsystems
                         mRampButton.setEnabled(true);
-                        // THOMAS: turned off since we don't need joystick controls atm
                         startSendJoystickDataThread();
+
+                        // THOMAS: We connected so we need to connect our control to the CF
+                        mPacketControl.setCF(mCrazyflie);
+                        mPacketControl.setControl(mControls);
                     } else {
+                        Toast.makeText(getApplicationContext(), "Connected With Radio", Toast.LENGTH_SHORT).show();
                         mToggleConnectButton.setBackgroundDrawable(getResources().getDrawable(R.drawable.custom_button_connected));
                         mRampButton.setEnabled(true);
                     }
@@ -571,10 +673,24 @@ public class MainActivity extends Activity {
             });
         }
 
-        // THOMAS: This one isn;t called from what I can tell
         @Override
         public void setupFinished(String connectionInfo) {
+            // begin param toc fetch
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(getApplicationContext(), "Parameters TOC fetch begin", Toast.LENGTH_SHORT).show();
+                }
+            });
            final Toc paramToc = mCrazyflie.getParam().getToc();
+
+           // begin Log toc fetch
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(getApplicationContext(), "Log TOC fetch begin: " + paramToc.getTocSize(), Toast.LENGTH_SHORT).show();
+                }
+            });
            final Toc logToc = mCrazyflie.getLogg().getToc();
            if (paramToc != null) {
                mParamToc = paramToc;
@@ -584,6 +700,9 @@ public class MainActivity extends Activity {
                         Toast.makeText(getApplicationContext(), "Parameters TOC fetch finished: " + paramToc.getTocSize(), Toast.LENGTH_SHORT).show();
                     }
                 });
+               mCrazyflie.getParam().setValue("sound.effect",10);
+// THOMAS: These cause a crash when trying to start-up. This is because the parameters are named wrong and may not be active.
+/*
                 //activate buzzer sound button when a CF2 is recognized (a buzzer can not yet be detected separately)
                 mCrazyflie.getParam().addParamListener(new ParamListener("cpu", "flash") {
                     @Override
@@ -620,8 +739,9 @@ public class MainActivity extends Activity {
                         Log.d(LOG_TAG, "No of ring effects: " + mNoRingEffect);
                     }
                 });
-                mCrazyflie.getParam().requestParamUpdate("ring.neffect");
+*/
             }
+
             if (logToc != null) {
                 mLogToc = logToc;
                 runOnUiThread(new Runnable() {
@@ -633,13 +753,7 @@ public class MainActivity extends Activity {
                 createLogConfigs();
                 startLogConfigs();
             }
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    mRampButton.setEnabled(true);
-                }
-            });
-            //startSendJoystickDataThread();
+            startSendJoystickDataThread();
         }
 
         @Override
@@ -678,6 +792,8 @@ public class MainActivity extends Activity {
                     mBuzzerSoundButton.setEnabled(false);
                     mRampButton.setEnabled(false);
                     setBatteryLevel(-1.0f);
+                    mPacketControl.setCF(null);
+                    mPacketControl.setControl(null);
                 }
             });
             stopLogConfigs();
@@ -718,7 +834,7 @@ public class MainActivity extends Activity {
             //use BLE
             if ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) &&
                     getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)){
-                boolean writeWithResponse = mPreferences.getBoolean(PreferencesActivity.KEY_PREF_BLATENCY_BOOL, false);
+                boolean writeWithResponse = mPreferences.getBoolean(PreferencesActivity.KEY_PREF_BLATENCY_BOOL, true);
                 Log.d(LOG_TAG, "Using bluetooth write with response - " + writeWithResponse);
                 mDriver = new BleLink(this, writeWithResponse);
             } else {
@@ -754,11 +870,13 @@ public class MainActivity extends Activity {
      * Start thread to periodically send commands containing the user input
      */
     private void startSendJoystickDataThread() {
+        if (mSendJoystickDataThread != null){
+            return;
+        }
         mSendJoystickDataThread = new Thread(new Runnable() {
             @Override
             public void run() {
                 while (mCrazyflie != null) {
-                    Log.d(LOG_TAG, "Thrust absolute: " + mController.getThrustAbsolute());
                     mCrazyflie.sendPacket(new CommanderPacket(mController.getRoll(), mController.getPitch(), mController.getYaw(), (char) (mController.getThrustAbsolute()), mControls.isXmode()));
                     try {
                         Thread.sleep(20);
@@ -772,55 +890,15 @@ public class MainActivity extends Activity {
         mSendJoystickDataThread.start();
     }
 
-    final private static int thrustSteps = 100;
-    final private static float maxThreshVal = 65535;
-
     private void startRampSequence() {
-        Thread rampSequenceThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                float thrust = maxThreshVal*mControls.getMinThrust()/100;
-                float thrustStep = maxThreshVal*mControls.getThrustFactor()/thrustSteps/100;
-                float maxThrustVal = maxThreshVal*mControls.getMaxThrust()/100;
-                for(; thrust <= maxThrustVal; thrust += thrustStep) {
-                    Log.d(LOG_TAG, "thrust: " + String.valueOf(thrust));
-                    mCrazyflie.sendPacket(new CommanderPacket(0, 0, 0, (char) ((int)(thrust)), mControls.isXmode()));
-                    try {
-                        Thread.sleep(50);
-                    } catch (InterruptedException e) {
-                        Log.d(LOG_TAG, "RampSequenceThread was interrupted.");
-                        break;
-                    }
-                }
-                Log.d(LOG_TAG, "MinThrust: " + String.valueOf(mControls.getMinThrust()));
-                Log.d(LOG_TAG, "MaxThrust: " + String.valueOf(mControls.getMaxThrust()));
-            }
-        });
-        rampSequenceThread.start();
+        mAutoFlightMode = true;
+        mPacketControl.liftOff();
     };
 
     private void startLandSequence() {
-        Thread landSequenceThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                float thrust = maxThreshVal*mControls.getMaxThrust()/100;
-                float thrustStep = maxThreshVal*mControls.getThrustFactor()/thrustSteps/100;
-                float minThrustVal = maxThreshVal*mControls.getMinThrust()/100;
-                for(; thrust > minThrustVal; thrust -= thrustStep){
-                    Log.d(LOG_TAG, "thrust: " + String.valueOf(thrust));
-                    mCrazyflie.sendPacket(new CommanderPacket(0, 0, 0, (char) ((int)(thrust)), mControls.isXmode()));
-                    try {
-                        Thread.sleep(50);
-                    } catch (InterruptedException e) {
-                        Log.d(LOG_TAG, "LandSequenceThread was interrupted.");
-                        break;
-                    }
-                }
-                mCrazyflie.sendPacket(new CommanderPacket(0, 0, 0, (char) 0, mControls.isXmode()));
-                startSendJoystickDataThread();
-            }
-        });
-        landSequenceThread.start();
+        mPacketControl.land();
+        mAutoFlightMode = false;
+        startSendJoystickDataThread();
     };
 
     // extra method for onClick attribute in XML
@@ -866,11 +944,9 @@ public class MainActivity extends Activity {
     }
 
     public void enableAltHoldMode(boolean hover) {
-        // For safety reasons, altHold mode is only supported when the Crazyradio and a game pad are used
-        if (mCrazyflie != null && mCrazyflie.getDriver() instanceof RadioDriver && mController instanceof GamepadController) {
-//            Log.i(LOG_TAG, "flightmode.althold: getThrust(): " + mController.getThrustAbsolute());
-            mCrazyflie.setParamValue("flightmode.althold", hover ? 1 : 0);
-        }
+        Log.d(LOG_TAG, "Alt Hold Mode: " + hover);
+        mGamepadController.mHover = true;
+        mCrazyflie.setParamValue("flightmode.althold", hover ? 1 : 0);
     }
 
     public Crazyflie getCrazyflie(){
@@ -914,17 +990,25 @@ public class MainActivity extends Activity {
         return !usbDeviceList.isEmpty();
     }
 
+    // THOMAS: The log reader?
     private LogAdapter standardLogAdapter = new LogAdapter() {
 
         public void logDataReceived(LogConfig logConfig, Map<String, Number> data, int timestamp) {
             super.logDataReceived(logConfig, data, timestamp);
-
+            Log.d(LOG_TAG, "Log recieved: " + logConfig.getName());
             if ("Standard".equals(logConfig.getName())) {
-                final float battery = (float) data.get("pm.vbat");
+                final float battery = data.get("pm.vbat").floatValue();
+                final int deltaX = data.get("motion.deltaX").intValue();
+                final int deltaY = data.get("motion.deltaY").intValue();
+                final int zrange = data.get("range.zrange").intValue();
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         setBatteryLevel(battery);
+                        /*
+                        if(mAutoFlightMode){
+                        }
+                        */
                     }
                 });
             }
@@ -937,6 +1021,9 @@ public class MainActivity extends Activity {
 
     private void createLogConfigs() {
         mLogConfigStandard.addVariable("pm.vbat", VariableType.FLOAT);
+        mLogConfigStandard.addVariable("motion.deltaX", VariableType.INT16_T);
+        mLogConfigStandard.addVariable("motion.deltaY", VariableType.INT16_T);
+        mLogConfigStandard.addVariable("range.zrange", VariableType.UINT16_T);
         mLogg = mCrazyflie.getLogg();
 
         if (mLogg != null) {

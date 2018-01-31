@@ -113,6 +113,112 @@
         android:contentDescription="@string/button_ramp_contentDescription"/>
 
     <ImageButton
+        android:id="@+id/button_HoverUp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="180dp"
+        android:layout_marginRight="10dp"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_toLeftOf="@id/button_deltaXUp"
+        android:background="@drawable/custom_button"
+        android:src="@drawable/arrow_up_blue"
+        android:elevation="2dp"
+        android:contentDescription="HoverUpButton"/>
+
+    <ImageButton
+        android:id="@+id/button_HoverDown"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="300dp"
+        android:layout_marginRight="10dp"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_toLeftOf="@id/button_deltaXUp"
+        android:background="@drawable/custom_button"
+        android:src="@drawable/arrow_down_blue"
+        android:elevation="2dp"
+        android:contentDescription="HoverDownDownButton"/>
+
+    <ImageButton
+        android:id="@+id/button_LiftOffUp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="180dp"
+        android:layout_marginLeft="10dp"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_toRightOf="@id/button_deltaXUp"
+        android:background="@drawable/custom_button"
+        android:src="@drawable/arrow_up_red"
+        android:elevation="2dp"
+        android:contentDescription="LiftOffUpButton"/>
+
+    <ImageButton
+        android:id="@+id/button_LiftOffDown"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="300dp"
+        android:layout_marginLeft="10dp"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_toRightOf="@id/button_deltaXUp"
+        android:background="@drawable/custom_button"
+        android:src="@drawable/arrow_down_red"
+        android:elevation="2dp"
+        android:contentDescription="LiftOffDownButton"/>
+
+    <ImageButton
+        android:id="@+id/button_deltaXUp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="200dp"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:background="@drawable/custom_button"
+        android:src="@drawable/arrow_up"
+        android:elevation="2dp"
+        android:contentDescription="DeltaXUpButton"/>
+
+    <ImageButton
+        android:id="@+id/button_deltaXDown"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="280dp"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:background="@drawable/custom_button"
+        android:src="@drawable/arrow_down"
+        android:elevation="2dp"
+        android:contentDescription="DeltaXDownButton"/>
+
+    <ImageButton
+        android:id="@+id/button_deltaYDown"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="240dp"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_toLeftOf="@id/button_deltaXUp"
+        android:background="@drawable/custom_button"
+        android:src="@drawable/arrow_left"
+        android:elevation="2dp"
+        android:contentDescription="DeltaYDownButton"/>
+
+    <ImageButton
+        android:id="@+id/button_deltaYUp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="240dp"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_toRightOf="@id/button_deltaXUp"
+        android:background="@drawable/custom_button"
+        android:src="@drawable/arrow_right"
+        android:elevation="2dp"
+        android:contentDescription="DeltaYUpButton"/>
+
+    <ImageButton
         android:id="@+id/button_buzzerSound"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
