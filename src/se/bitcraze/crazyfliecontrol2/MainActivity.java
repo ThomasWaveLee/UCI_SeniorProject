@@ -106,9 +106,6 @@ public class MainActivity extends Activity {
 
     private SharedPreferences mPreferences;
 
-    private IController mController;
-    private GamepadController mGamepadController;
-
     private String mRadioChannelDefaultValue;
     private String mRadioDatarateDefaultValue;
 
@@ -133,11 +130,7 @@ public class MainActivity extends Activity {
     private int mRingEffect = 0;
     private int mNoRingEffect = 0;
     private int mCpuFlash = 0;
-    //private ImageButton mRingEffectButton;
-    //private ImageButton mHeadlightButton;
 
-    private ImageButton mRingEffectButton;
-    private ImageButton mHeadlightButton;
     private ImageButton mBuzzerSoundButton;
     private ImageButton mRampButton;
     private ImageButton mDeltaXUpButton;
@@ -175,10 +168,6 @@ public class MainActivity extends Activity {
         mControls.setDefaultPreferenceValues(getResources());
 
         mPacketControl = new PacketControl();
-
-        //initialize gamepad controller
-        mGamepadController = new GamepadController(mControls, this, mPreferences);
-        mGamepadController.setDefaultPreferenceValues(getResources());
 
         //initialize buttons
         mToggleConnectButton = (ImageButton) findViewById(R.id.imageButton_connect);
@@ -429,7 +418,6 @@ public class MainActivity extends Activity {
         //TODO: improve
         PreferencesActivity.setDefaultJoystickSize(this);
         mControls.setControlConfig();
-        mGamepadController.setControlConfig();
         resetInputMethod();
         checkScreenLock();
         //disable action buttons
@@ -451,7 +439,6 @@ public class MainActivity extends Activity {
     protected void onPause() {
         super.onPause();
         mControls.resetAxisValues();
-        mController.disable();
         disconnect();
     }
 
@@ -512,34 +499,17 @@ public class MainActivity extends Activity {
         getWindow().getDecorView().setSystemUiVisibility(newUiOptions);
     }
 
-    //TODO: fix indirection
     public void updateFlightData(){
-        //mFlightDataView.updateFlightData(mController.getPitch(), mController.getRoll(), mController.getThrust(), mController.getYaw());
     }
 
     @Override
     public boolean dispatchGenericMotionEvent(MotionEvent event) {
-        // Check that the event came from a joystick since a generic motion event could be almost anything.
-        if ((event.getSource() & InputDevice.SOURCE_CLASS_JOYSTICK) != 0 && event.getAction() == MotionEvent.ACTION_MOVE && mController instanceof GamepadController) {
-            mGamepadController.dealWithMotionEvent(event);
-            updateFlightData();
-            return true;
-        } else {
-            return super.dispatchGenericMotionEvent(event);
-        }
+        return false;
     }
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
-        // do not call super if key event comes from a gamepad, otherwise the buttons can quit the app
-        if (isJoystickButton(event.getKeyCode()) && mController instanceof GamepadController) {
-            mGamepadController.dealWithKeyEvent(event);
-            // exception for OUYA controllers
-            if (!Build.MODEL.toUpperCase(Locale.getDefault()).contains("OUYA")) {
-                return true;
-            }
-        }
-        return super.dispatchKeyEvent(event);
+        return false;
     }
 
     // this workaround is necessary because DPad buttons are not considered to be "Gamepad buttons"
@@ -627,7 +597,6 @@ public class MainActivity extends Activity {
                         Toast.makeText(getApplicationContext(), "Connected With BLE", Toast.LENGTH_SHORT).show();
                         mToggleConnectButton.setBackgroundDrawable(getResources().getDrawable(R.drawable.custom_button_connected_ble));
                         mRampButton.setEnabled(true);
-                        startSendJoystickDataThread();
 
                         // THOMAS: We connected so we need to connect our control to the CF
                         mPacketControl.setCF(mCrazyflie);
@@ -721,7 +690,6 @@ public class MainActivity extends Activity {
                 createLogConfigs();
                 startLogConfigs();
             }
-            startSendJoystickDataThread();
         }
 
         @Override
@@ -834,30 +802,6 @@ public class MainActivity extends Activity {
         }
     }
 
-    /**
-     * Start thread to periodically send commands containing the user input
-     */
-    private void startSendJoystickDataThread() {
-        if (mSendJoystickDataThread != null){
-            return;
-        }
-        mSendJoystickDataThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (mCrazyflie != null) {
-                    mCrazyflie.sendPacket(new CommanderPacket(mController.getRoll(), mController.getPitch(), mController.getYaw(), (char) (mController.getThrustAbsolute()), mControls.isXmode()));
-                    try {
-                        Thread.sleep(20);
-                    } catch (InterruptedException e) {
-                        Log.d(LOG_TAG, "SendJoystickDataThread was interrupted.");
-                        break;
-                    }
-                }
-            }
-        });
-        mSendJoystickDataThread.start();
-    }
-
     private void startRampSequence() {
         mAutoFlightMode = true;
         mPacketControl.liftOff();
@@ -866,7 +810,6 @@ public class MainActivity extends Activity {
     private void startLandSequence() {
         mPacketControl.land();
         mAutoFlightMode = false;
-        startSendJoystickDataThread();
     };
 
     // extra method for onClick attribute in XML
@@ -913,7 +856,6 @@ public class MainActivity extends Activity {
 
     public void enableAltHoldMode(boolean hover) {
         Log.d(LOG_TAG, "Alt Hold Mode: " + hover);
-        mGamepadController.mHover = true;
         mCrazyflie.setParamValue("flightmode.althold", hover ? 1 : 0);
     }
 
@@ -946,7 +888,7 @@ public class MainActivity extends Activity {
     }
 
     public IController getController(){
-        return mController;
+        return null;
     }
 
     public static boolean isCrazyradioAvailable(Context context) {
@@ -973,10 +915,6 @@ public class MainActivity extends Activity {
                     @Override
                     public void run() {
                         setBatteryLevel(battery);
-                        /*
-                        if(mAutoFlightMode){
-                        }
-                        */
                     }
                 });
             }
