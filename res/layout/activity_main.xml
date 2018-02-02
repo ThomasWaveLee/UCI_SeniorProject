@@ -10,13 +10,10 @@
         android:layout_height="wrap_content"
         android:src="@drawable/ic_battery_std_black_18dp"
         android:labelFor="@+id/battery_text"
-        android:layout_marginLeft="10dp"
         android:layout_marginStart="10dp"
-        android:layout_marginRight="0dp"
         android:layout_marginEnd="0dp"
         android:layout_marginTop="5dp"
         android:layout_alignParentTop="true"
-        android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
         android:contentDescription="@string/batteryIconContentDescription"/>
 
@@ -29,7 +26,6 @@
         android:textAlignment="viewEnd"
         android:gravity="end"
         android:layout_alignBottom="@+id/battery_icon"
-        android:layout_toRightOf="@+id/battery_icon"
         android:layout_toEndOf="@+id/battery_icon" />
 
     <ImageView
@@ -38,12 +34,9 @@
         android:layout_height="wrap_content"
         android:src="@drawable/ic_wifi_tethering_black_18dp"
         android:labelFor="@+id/linkQuality_text"
-        android:layout_marginLeft="5dp"
         android:layout_marginStart="5dp"
-        android:layout_marginRight="2dp"
         android:layout_marginEnd="2dp"
         android:layout_alignBottom="@+id/battery_icon"
-        android:layout_toRightOf="@+id/battery_text"
         android:layout_toEndOf="@+id/battery_text"
         android:contentDescription="@string/linkQualityIconContentDescription"/>
 
@@ -56,7 +49,6 @@
         android:textAlignment="viewEnd"
         android:gravity="end"
         android:layout_alignBottom="@+id/linkQuality_icon"
-        android:layout_toRightOf="@+id/linkQuality_icon"
         android:layout_toEndOf="@+id/linkQuality_icon" />
 
     <ImageButton
@@ -64,10 +56,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignTop="@+id/button_ramp"
-        android:layout_marginLeft="20dp"
         android:layout_marginStart="20dp"
         android:layout_toEndOf="@+id/button_ramp"
-        android:layout_toRightOf="@+id/button_ramp"
         android:background="@drawable/custom_button"
         android:contentDescription="@string/menu_connect_ContentDescription"
         android:elevation="2dp"
@@ -78,10 +68,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignTop="@+id/imageButton_connect"
-        android:layout_marginLeft="20dp"
         android:layout_marginStart="20dp"
         android:layout_toEndOf="@+id/imageButton_connect"
-        android:layout_toRightOf="@+id/imageButton_connect"
         android:background="@drawable/custom_button"
         android:contentDescription="@string/menu_preferences_ContentDescription"
         android:elevation="2dp"
@@ -93,73 +81,13 @@
         android:id="@+id/button_ramp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginLeft="6dp"
-        android:layout_marginRight="6dp"
-        android:layout_marginTop="5dp"
-        android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true"
-        android:layout_toLeftOf="@id/imageButton_connect"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="60dp"
+        android:layout_toStartOf="@+id/button_deltaYDown"
         android:background="@drawable/custom_button"
         android:contentDescription="@string/button_ramp_contentDescription"
         android:elevation="2dp"
         android:src="@drawable/ic_action_settings_light" />
-        android:contentDescription="@string/button_ramp_contentDescription"/>
-
-    <ImageButton
-        android:id="@+id/button_HoverUp"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="180dp"
-        android:layout_marginRight="10dp"
-        android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true"
-        android:layout_toLeftOf="@id/button_deltaYUp"
-        android:background="@drawable/custom_button"
-        android:src="@drawable/arrow_up_blue"
-        android:elevation="2dp"
-        android:contentDescription="HoverUpButton"/>
-
-    <ImageButton
-        android:id="@+id/button_HoverDown"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="300dp"
-        android:layout_marginRight="10dp"
-        android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true"
-        android:layout_toLeftOf="@id/button_deltaYUp"
-        android:background="@drawable/custom_button"
-        android:src="@drawable/arrow_down_blue"
-        android:elevation="2dp"
-        android:contentDescription="HoverDownDownButton"/>
-
-    <ImageButton
-        android:id="@+id/button_LiftOffUp"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="180dp"
-        android:layout_marginLeft="10dp"
-        android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true"
-        android:layout_toRightOf="@id/button_deltaYUp"
-        android:background="@drawable/custom_button"
-        android:src="@drawable/arrow_up_red"
-        android:elevation="2dp"
-        android:contentDescription="LiftOffUpButton"/>
-
-    <ImageButton
-        android:id="@+id/button_LiftOffDown"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="300dp"
-        android:layout_marginLeft="10dp"
-        android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true"
-        android:layout_toRightOf="@id/button_deltaYUp"
-        android:background="@drawable/custom_button"
-        android:src="@drawable/arrow_down_red"
-        android:elevation="2dp"
-        android:contentDescription="LiftOffDownButton"/>
 
     <ImageButton
         android:id="@+id/button_deltaYUp"
@@ -180,6 +108,7 @@
         android:layout_marginTop="280dp"
         android:layout_alignParentTop="true"
         android:layout_centerHorizontal="true"
+        android:layout_alignStart="@id/button_deltaYUp"
         android:background="@drawable/custom_button"
         android:src="@drawable/arrow_down"
         android:elevation="2dp"
@@ -211,65 +140,84 @@
         android:elevation="2dp"
         android:contentDescription="DeltaXUpButton"/>
 
-    <ImageButton
-        android:id="@+id/button_ledRing"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginLeft="6dp"
-        android:layout_marginRight="6dp"
-        android:layout_alignBottom="@+id/button_headLight"
-        android:layout_toLeftOf="@id/button_headLight"
-        android:layout_toStartOf="@id/button_headLight"
-        android:background="@drawable/custom_button_action"
-        android:src="@drawable/ic_led_ring"
-        android:elevation="2dp"
-        android:onClick="switchLedRingEffect"
-        android:contentDescription="@string/button_ledring_contentDescription"/>
 
     <ImageButton
-        android:id="@+id/button_headLight"
+        android:id="@+id/button_HoverUp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginLeft="6dp"
-        android:layout_marginRight="6dp"
-        android:layout_below="@+id/imageButton_settings"
+        android:layout_marginTop="180dp"
+        android:layout_marginEnd="10dp"
+        android:layout_alignParentTop="true"
         android:layout_centerHorizontal="true"
-        android:background="@drawable/custom_button_action"
-        android:src="@drawable/ic_headlight"
+        android:layout_toStartOf="@id/button_deltaYUp"
+        android:background="@drawable/custom_button"
+        android:src="@drawable/arrow_up_blue"
         android:elevation="2dp"
-        android:onClick="toggleHeadlight"
-        android:contentDescription="@string/button_headlight_contentDescription"/>
+        android:contentDescription="HoverUpButton"/>
+
+    <ImageButton
+        android:id="@+id/button_HoverDown"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="300dp"
+        android:layout_marginEnd="10dp"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_toStartOf="@id/button_deltaYUp"
+        android:background="@drawable/custom_button"
+        android:src="@drawable/arrow_down_blue"
+        android:elevation="2dp"
+        android:contentDescription="HoverDownDownButton"/>
+
+    <ImageButton
+        android:id="@+id/button_LiftOffUp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="180dp"
+        android:layout_marginStart="10dp"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_toEndOf="@id/button_deltaYUp"
+        android:background="@drawable/custom_button"
+        android:src="@drawable/arrow_up_red"
+        android:elevation="2dp"
+        android:contentDescription="LiftOffUpButton"/>
+
+    <ImageButton
+        android:id="@+id/button_LiftOffDown"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="300dp"
+        android:layout_marginStart="10dp"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_toEndOf="@id/button_deltaYUp"
+        android:background="@drawable/custom_button"
+        android:src="@drawable/arrow_down_red"
+        android:elevation="2dp"
+        android:contentDescription="LiftOffDownButton"/>
+
 
     <ImageButton
         android:id="@+id/button_buzzerSound"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_above="@+id/button_ramp"
-        android:layout_alignLeft="@+id/button_ramp"
-        android:layout_alignStart="@+id/button_ramp"
-        android:layout_marginBottom="117dp"
+        android:layout_marginEnd="20dp"
+        android:layout_toLeftOf="@id/button_ramp"
+        android:layout_alignTop="@+id/button_ramp"
         android:background="@drawable/custom_button_action"
         android:contentDescription="@string/button_buzzer_contentDescription"
         android:elevation="2dp"
         android:onClick="playBuzzerSound"
         android:src="@drawable/ic_volume_up_black" />
 
-    <com.MobileAnarchy.Android.Widgets.Joystick.DualJoystickView
-        android:id="@+id/joysticks"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:gravity="bottom"
-        android:layout_marginTop="1dp">
-    </com.MobileAnarchy.Android.Widgets.Joystick.DualJoystickView>
-
     <SeekBar
         android:id="@+id/distBar"
         android:layout_width="250dp"
         android:layout_height="wrap_content"
-        android:layout_above="@id/button_ramp"
+        android:layout_below="@+id/button_HoverDown"
         android:layout_centerHorizontal="true"
-        android:layout_marginBottom="50dp" />
+        android:layout_marginTop="30dp" />
 
     <TextView
         android:id="@+id/distText"
@@ -293,9 +241,9 @@
         android:id="@+id/button_map"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_above="@+id/button_buzzerSound"
-        android:layout_centerHorizontal="true"
-        android:layout_marginBottom="36dp"
+        android:layout_below="@+id/title"
+        android:layout_marginTop="16dp"
+        android:layout_toStartOf="@+id/button_LiftOffUp"
         android:text="Map" />
 
 

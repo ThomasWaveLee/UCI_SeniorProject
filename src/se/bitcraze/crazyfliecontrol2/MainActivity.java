@@ -94,9 +94,6 @@ public class MainActivity extends Activity {
 
     private static final String LOG_TAG = "CrazyflieControl";
 
-    private DualJoystickView mDualJoystickView;
-    //private FlightDataView mFlightDataView;
-
     private PacketControl mPacketControl;
 
     private Crazyflie mCrazyflie;
@@ -179,10 +176,6 @@ public class MainActivity extends Activity {
 
         mPacketControl = new PacketControl();
 
-        //Default controller
-        mDualJoystickView = (DualJoystickView) findViewById(R.id.joysticks);
-        mController = new TouchController(mControls, this, mDualJoystickView);
-
         //initialize gamepad controller
         mGamepadController = new GamepadController(mControls, this, mPreferences);
         mGamepadController.setDefaultPreferenceValues(getResources());
@@ -202,9 +195,6 @@ public class MainActivity extends Activity {
         mHoverThreshUpButton = (ImageButton) findViewById(R.id.button_HoverUp);
         mHoverThreshDownButton = (ImageButton) findViewById(R.id.button_HoverDown);
         intitializeTestingButtons();
-
-        mFlightDataView = (FlightDataView) findViewById(R.id.flightdataview);
-        //mFlightDataView = (FlightDataView) findViewById(R.id.flightdataview);
 
         //action buttons
         //mRingEffectButton = (ImageButton) findViewById(R.id.button_ledRing);
@@ -438,7 +428,6 @@ public class MainActivity extends Activity {
         super.onResume();
         //TODO: improve
         PreferencesActivity.setDefaultJoystickSize(this);
-        mDualJoystickView.setPreferences(mPreferences);
         mControls.setControlConfig();
         mGamepadController.setControlConfig();
         resetInputMethod();
@@ -451,7 +440,6 @@ public class MainActivity extends Activity {
         if (mPreferences.getBoolean(PreferencesActivity.KEY_PREF_IMMERSIVE_MODE_BOOL, false)) {
             setHideyBar();
         }
-        mDualJoystickView.requestLayout();
     }
 
     @Override
@@ -568,26 +556,6 @@ public class MainActivity extends Activity {
     }
 
     private void resetInputMethod() {
-        mController.disable();
-        switch (mControls.getControllerType()) {
-            case 0:
-                // Use GyroscopeController if activated in the preferences
-                if (mControls.isUseGyro()) {
-                    mController = new GyroscopeController(mControls, this, mDualJoystickView);
-                } else {
-                    // TODO: reuse existing touch controller?
-                    mController = new TouchController(mControls, this, mDualJoystickView);
-                }
-                break;
-            case 1:
-                    // TODO: show warning if no game pad is found?
-                    mController = mGamepadController;
-                break;
-            default:
-                break;
-
-        }
-        mController.enable();
     }
 
     private final BroadcastReceiver mUsbReceiver = new BroadcastReceiver() {
