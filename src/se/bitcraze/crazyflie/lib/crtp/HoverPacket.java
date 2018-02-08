@@ -29,6 +29,14 @@ public class HoverPacket extends CrtpPacket {
         this.mZdistance = zDistance;
     }
 
+    public HoverPacket(HoverPacket base, float newZDist){
+        super(0,CrtpPort.GENERIC_COMMANDER);
+        this.mYx = base.mYx;
+        this.mYy = base.mYy;
+        this.mYawrate = base.mYawrate;
+        this.mZdistance = newZDist;
+    }
+
     @Override
     protected void serializeData(ByteBuffer buffer) {
         buffer.put((byte)0x05);

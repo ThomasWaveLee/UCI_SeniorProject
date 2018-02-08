@@ -54,6 +54,8 @@ public class PacketControl {
     private float mHoverThrustControlFactor = .56f;
     private float mHoverThrust = mHoverThrustControlFactor * absMaxThrust;
 
+    private MovementRecorder mMovementRecorder = new MovementRecorder();
+
     // Thread to run when set to auto flight
     private Thread mPacketSender;
 
@@ -103,6 +105,8 @@ public class PacketControl {
 
         // time in ms
         private float mTime;
+        private float mVx = 0, mVy = 0, mYawrate = 0;
+        public float mRemainingTime;
         // used for priority queue to allow overrides
         public int mPriority;
         public HoverPacket mHoverPacket;
@@ -112,19 +116,25 @@ public class PacketControl {
         public CfCommand(Direction dir,float time, float velocity, float yawRate){
             mPriority = MovePriority;
             mTime = time;
+            mRemainingTime = mTime;
+
             switch(dir) {
                 //  NOTE: The crazyflie sees "forward" as +x and "right" as +y
                 case FORWARD:
                     mHoverPacket = new HoverPacket(velocity,0,0,mZdistance);
+                    mVx = velocity;
                     break;
                 case BACK:
                     mHoverPacket = new HoverPacket(-velocity,0,0,mZdistance);
+                    mVx = -velocity;
                     break;
                 case RIGHT:
                     mHoverPacket = new HoverPacket(0,velocity,0,mZdistance);
+                    mVy = velocity;
                     break;
                 case LEFT:
                     mHoverPacket = new HoverPacket(0,-velocity,0,mZdistance);
+                    mVy = -velocity;
                     break;
                 case UP:
                 default:
@@ -229,13 +239,27 @@ public class PacketControl {
                                 if (currentCommand == null) {
                                     mCrazyFlie.sendPacket(new HoverPacket(mVy, mVx, mYawRate, mZdistance));
                                 } else {
+                                    currentCommand.mHoverPacket = new HoverPacket(currentCommand.mHoverPacket,mZdistance);
                                     mCrazyFlie.sendPacket(currentCommand.mHoverPacket);
                                     timeLeft = currentCommand.mTime;
+                                    mMovementRecorder.incrementAll(currentCommand.mVx*gCommandRate/1000,
+                                            currentCommand.mVy*gCommandRate/1000,
+                                            currentCommand.mYawrate*gCommandRate/1000);
                                 }
                             } else {
+                                // send pckt and update remaining time
                                 mCrazyFlie.sendPacket(currentCommand.mHoverPacket);
-                                timeLeft -= gCommandRate;
-                                mLogger.debug(currentCommand + " , TimeLeft: " + timeLeft);
+                                currentCommand.mRemainingTime -= gCommandRate;
+                                timeLeft = currentCommand.mRemainingTime;
+
+                                // update app-side drone position
+                                // movementRecorder holds position data in meters
+                                //      need to divide by 1000 since gCommandRate is in ms and mVx is in m/s
+                                mMovementRecorder.incrementAll(currentCommand.mVx*gCommandRate/1000,
+                                        currentCommand.mVy*gCommandRate/1000,
+                                        currentCommand.mYawrate*gCommandRate/1000);
+
+                               // mLogger.debug(currentCommand + " , TimeLeft: " + timeLeft);
                             }
                         }
                         try {
@@ -283,7 +307,7 @@ public class PacketControl {
             mQueue.clear();
             mCrazyFlie.sendPacket(new HoverPacket(0,0,0,gBaseHeight));
             try{
-                Thread.sleep(gCommandRate);
+                Thread.sleep(gCommandRate*5);
             } catch (Exception e) {}
 
             mCrazyFlie.sendPacket(new CommanderPacket(0, 0, 0, (char) (0.0f), mControls.isXmode()));
@@ -291,13 +315,6 @@ public class PacketControl {
         } else {
             mLogger.debug("[PacketControl]: Not Airborn!");
         }
-    }
-
-    public void up(){
-        if (!mIsFlying){
-            mIsFlying = true;
-        }
-        return;
     }
 
     public void incrementAll(int roll,int pitch, int yaw, float thrust){
