@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="se.bitcraze.crazyfliecontrol2.ManualActivity">
+
+    <ImageButton
+        android:id="@+id/button_deltaYUp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/button_deltaXDown"
+        android:layout_centerHorizontal="true"
+        android:contentDescription="DeltaYUpButton"
+        android:src="@drawable/arrow_up" />
+
+    <ImageButton
+        android:id="@+id/button_deltaYDown"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@+id/button_HoverDown"
+        android:layout_toEndOf="@+id/button_deltaXDown"
+        android:contentDescription="DeltaYDownButton"
+        android:src="@drawable/arrow_down" />
+
+    <ImageButton
+        android:id="@+id/button_deltaXDown"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/button_deltaYDown"
+        android:layout_toStartOf="@+id/button_deltaYUp"
+        android:background="@drawable/custom_button"
+        android:contentDescription="DeltaXDownButton"
+        android:src="@drawable/arrow_left" />
+
+    <ImageButton
+        android:id="@+id/button_deltaXUp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/button_deltaYUp"
+        android:layout_toEndOf="@+id/button_deltaYUp"
+        android:background="@drawable/custom_button"
+        android:contentDescription="DeltaXUpButton"
+        android:src="@drawable/arrow_right" />
+
+
+    <ImageButton
+        android:id="@+id/button_HoverUp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/button_deltaXDown"
+        android:layout_alignStart="@+id/button_deltaXDown"
+        android:background="@drawable/custom_button"
+        android:contentDescription="HoverUpButton"
+        android:src="@drawable/arrow_up_blue" />
+
+    <ImageButton
+        android:id="@+id/button_HoverDown"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@+id/button_LiftOffDown"
+        android:layout_toStartOf="@+id/button_deltaYDown"
+        android:background="@drawable/custom_button"
+        android:contentDescription="HoverDownDownButton"
+        android:src="@drawable/arrow_down_blue" />
+
+    <ImageButton
+        android:id="@+id/button_LiftOffUp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/button_deltaXUp"
+        android:layout_toEndOf="@+id/button_deltaYUp"
+        android:background="@drawable/custom_button"
+        android:contentDescription="LiftOffUpButton"
+        android:src="@drawable/arrow_up_red"
+        tools:layout_editor_absoluteX="269dp"
+        tools:layout_editor_absoluteY="146dp" />
+
+    <ImageButton
+        android:id="@+id/button_LiftOffDown"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="167dp"
+        android:layout_toEndOf="@+id/button_deltaYDown"
+        android:background="@drawable/custom_button"
+        android:contentDescription="LiftOffDownButton"
+        android:src="@drawable/arrow_down_red" />
+
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="150dp"
+        android:textSize="32sp"
+        android:text="Developer Mode" />
+
+</RelativeLayout>

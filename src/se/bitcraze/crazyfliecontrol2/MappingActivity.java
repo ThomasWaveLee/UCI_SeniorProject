@@ -8,13 +8,14 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
-public class MappingActivity extends Activity {
+public class MappingActivity extends Activity{
 
     private Button mainButton;
     private Button calculateButton;
     private EditText startDestEntryText;
     private TextView directionsTextView;
     private Graph graph;
+    private String result = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,7 +34,7 @@ public class MappingActivity extends Activity {
                 directionsTextView.setText(" ");
                 String s = startDestEntryText.getText().toString();
                 String[] inputs = s.split(",");
-                String result = "";
+
 
                 /*Compute direction vectors*/
                 try {
@@ -48,8 +49,10 @@ public class MappingActivity extends Activity {
         mainButton.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View v){
-                Intent i = new Intent();
-                setResult(Activity.RESULT_OK, i);
+                Intent i = new Intent(MappingActivity.this, MainActivity.class);
+                i.putExtra("result", result);
+                startActivity(i);
+                // setResult(Activity.RESULT_OK, i);
                 finish();
             }
         });

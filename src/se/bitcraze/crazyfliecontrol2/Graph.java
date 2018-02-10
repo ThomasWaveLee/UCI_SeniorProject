@@ -18,12 +18,14 @@ public class Graph {
 
     Graph(){
         numberVertices = 5;
-        adjMatrix = new int[][]{{       0,      5, NO_PATH, NO_PATH, NO_PATH},
+        adjMatrix = new int[][]{
+                {       0,      5, NO_PATH, NO_PATH, NO_PATH},
                 {       5,      0,       3,       3, NO_PATH},
                 { NO_PATH,      3,       0, NO_PATH,       5},
                 { NO_PATH,      3, NO_PATH,       0, NO_PATH},
                 { NO_PATH,NO_PATH,       5, NO_PATH,       0}};
-        directionMatrix = new int[][]{{       0,     90, NO_PATH, NO_PATH, NO_PATH},
+        directionMatrix = new int[][]{
+                {       0,     90, NO_PATH, NO_PATH, NO_PATH},
                 {     -90,      0,       0,     180, NO_PATH},
                 { NO_PATH,      0,       0, NO_PATH,      90},
                 { NO_PATH,    180, NO_PATH,       0, NO_PATH},
@@ -43,6 +45,7 @@ public class Graph {
         String  s    = new String(),
                 prev = Integer.toString(src),
                 next;
+
         d.execute(src);
         Vector<Integer> v = d.getDirectionsTo(dest);
         for(Integer i : v){
