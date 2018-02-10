@@ -30,10 +30,11 @@ public class PacketControl implements Serializable{
 
     public final static int absMaxThrust = 65535;
     // period in ms at which to send packet to crazyflie
-    public final static int gCommandRate = 100;
+    public final static int gCommandRate = 50;
     // base height to hover at
     public final static float gBaseHeight = 0.1f;
 
+    // velocities and z distance
     private float mVx = 0;
     private float mVy = 0;
     private float mYawRate = 0;
@@ -47,18 +48,21 @@ public class PacketControl implements Serializable{
     private float mMinThrust;
     private boolean mIsFlying = false;
 
+    // crazyflie settings/connection
     private Crazyflie mCrazyFlie;
     private Controls mControls;
 
     private PriorityQueue<CfCommand> mQueue = new PriorityQueue<>(20);
 
+    private MovementRecorder mMovementRecorder = new MovementRecorder();
+
+    // Thread to run when set to auto flight
+    private Thread mPacketSender;
+
     private float mLiftOffThrustControlFactor = .60f;
     private float mLiftOffThrust = mLiftOffThrustControlFactor * absMaxThrust;
     private float mHoverThrustControlFactor = .56f;
     private float mHoverThrust = mHoverThrustControlFactor * absMaxThrust;
-
-    // Thread to run when set to auto flight
-    private Thread mPacketSender;
 
     public PacketControl(){
         mState = STATE.GROUNDED;
@@ -96,16 +100,18 @@ public class PacketControl implements Serializable{
 
     // Direction for Commands to send
     public enum Direction{
-        LEFT,RIGHT,FORWARD,BACK,UP
+        LEFT,RIGHT,FORWARD,BACK,UP,TURN_LEFT, TURN_RIGHT
     }
 
-    private static final int MovePriority = 2;
+
 
     // internal class to hold HoverPacket and time info
     public class CfCommand implements Comparable{
-
+        private static final int gMovePriority = 2;
         // time in ms
         private float mTime;
+        private float mVx = 0, mVy = 0, mYawrate = 0;
+        public float mRemainingTime;
         // used for priority queue to allow overrides
         public int mPriority;
         public HoverPacket mHoverPacket;
@@ -113,21 +119,33 @@ public class PacketControl implements Serializable{
         public CfCommand(){}
 
         public CfCommand(Direction dir,float time, float velocity, float yawRate){
-            mPriority = MovePriority;
+            mPriority = gMovePriority;
             mTime = time;
+            mRemainingTime = mTime;
+
             switch(dir) {
                 //  NOTE: The crazyflie sees "forward" as +x and "right" as +y
                 case FORWARD:
                     mHoverPacket = new HoverPacket(velocity,0,0,mZdistance);
+                    mVx = velocity;
                     break;
                 case BACK:
                     mHoverPacket = new HoverPacket(-velocity,0,0,mZdistance);
+                    mVx = -velocity;
                     break;
                 case RIGHT:
                     mHoverPacket = new HoverPacket(0,velocity,0,mZdistance);
+                    mVy = velocity;
                     break;
                 case LEFT:
                     mHoverPacket = new HoverPacket(0,-velocity,0,mZdistance);
+                    mVy = -velocity;
+                    break;
+                case TURN_LEFT:
+                    mHoverPacket = new HoverPacket(0,0,yawRate,mZdistance);
+                    break;
+                case TURN_RIGHT:
+                    mHoverPacket = new HoverPacket(0,0,-yawRate,mZdistance);
                     break;
                 case UP:
                 default:
@@ -165,6 +183,8 @@ public class PacketControl implements Serializable{
     }
     // End of internal class
 
+
+    // methods that input commands into queue to be sent to crazyflie
     public boolean goRight(float time){
         return addCommand(new CfCommand(Direction.RIGHT,time,mVy,0));
     }
@@ -201,6 +221,25 @@ public class PacketControl implements Serializable{
         return addCommand(new CfCommand(Direction.BACK,time,vx,0));
     }
 
+    public boolean turnLeft(float time){
+        return addCommand(new CfCommand(Direction.TURN_LEFT,time,0,mYawRate));
+    }
+
+    public boolean turnLeft(float angle, float yawrate){
+        float time = toMS(angle/yawrate);
+        return addCommand(new CfCommand(Direction.TURN_LEFT,time,0,yawrate));
+    }
+
+    public boolean turnRight(float time){
+        return addCommand(new CfCommand(Direction.TURN_RIGHT,time,0,mYawRate));
+    }
+
+    public boolean turnRight(float angle, float yawrate){
+        float time = toMS(angle/yawrate);
+        return addCommand(new CfCommand(Direction.TURN_RIGHT,time,0,yawrate));
+    }
+    // end of methods to send commands to crazyflie
+
     public float toMS(float sec){
         return sec * 1000;
     }
@@ -213,6 +252,7 @@ public class PacketControl implements Serializable{
         return mQueue.poll();
     }
 
+    // if crayzflie is GROUNDED then it will start the packet sender thread
     public void liftOff(){
         if (mState == STATE.GROUNDED){
             mLogger.debug("[PacketControl]: liftOff Called!");
@@ -230,15 +270,26 @@ public class PacketControl implements Serializable{
                                 currentCommand = getNextCommand();
                                 // if nothing in queue then hover w/ default settings
                                 if (currentCommand == null) {
-                                    mCrazyFlie.sendPacket(new HoverPacket(mVy, mVx, mYawRate, mZdistance));
+                                    mCrazyFlie.sendPacket(new HoverPacket(0, 0, 0, mZdistance));
                                 } else {
+                                    currentCommand.mHoverPacket = new HoverPacket(currentCommand.mHoverPacket,mZdistance);
                                     mCrazyFlie.sendPacket(currentCommand.mHoverPacket);
                                     timeLeft = currentCommand.mTime;
                                 }
                             } else {
+                                // send pckt and update remaining time
                                 mCrazyFlie.sendPacket(currentCommand.mHoverPacket);
-                                timeLeft -= gCommandRate;
-                                mLogger.debug(currentCommand + " , TimeLeft: " + timeLeft);
+                                currentCommand.mRemainingTime -= gCommandRate;
+                                timeLeft = currentCommand.mRemainingTime;
+
+                                // update app-side drone position
+                                // movementRecorder holds position data in meters
+                                //      need to divide by 1000 since gCommandRate is in ms and mVx is in m/s
+                                mMovementRecorder.incrementAll(currentCommand.mVx*gCommandRate/1000.0,
+                                        currentCommand.mVy*gCommandRate/1000.0,
+                                        currentCommand.mYawrate*gCommandRate/1000.0);
+
+                               // mLogger.debug(currentCommand + " , TimeLeft: " + timeLeft);
                             }
                         }
                         try {
@@ -269,6 +320,7 @@ public class PacketControl implements Serializable{
         }
     }
 
+    // the the crazyflie isnt GROUNDED it will stop the packet sender thread and land
     public void land(){
         if (mState != STATE.GROUNDED){
             mLogger.debug("[PacketControl]: land Called!");
@@ -286,7 +338,7 @@ public class PacketControl implements Serializable{
             mQueue.clear();
             mCrazyFlie.sendPacket(new HoverPacket(0,0,0,gBaseHeight));
             try{
-                Thread.sleep(gCommandRate);
+                Thread.sleep(gCommandRate*5);
             } catch (Exception e) {}
 
             mCrazyFlie.sendPacket(new CommanderPacket(0, 0, 0, (char) (0.0f), mControls.isXmode()));
@@ -296,13 +348,7 @@ public class PacketControl implements Serializable{
         }
     }
 
-    public void up(){
-        if (!mIsFlying){
-            mIsFlying = true;
-        }
-        return;
-    }
-
+    // setter/utility functions
     public void incrementAll(int roll,int pitch, int yaw, float thrust){
         mRoll += roll;
         mPitch += pitch;
