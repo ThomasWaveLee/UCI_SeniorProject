@@ -379,25 +379,25 @@ public class MainActivity extends Activity {
         mLiftOffThreshUpButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mPacketControl.incrementZDistance(0.1f);
+                mPacketControl.turnLeft(90,18);
             }
         });
         mLiftOffThreshDownButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mPacketControl.incrementZDistance(-0.1f);
+                mPacketControl.turnRight(90,18);
             }
         });
         mHoverThreshUpButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mPacketControl.incrementYawRate(1.0f);
+                mPacketControl.incrementZDistance(.1f);
             }
         });
         mHoverThreshDownButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mPacketControl.incrementYawRate(-1.0f);
+                mPacketControl.incrementZDistance(-.1f);
             }
         });
 

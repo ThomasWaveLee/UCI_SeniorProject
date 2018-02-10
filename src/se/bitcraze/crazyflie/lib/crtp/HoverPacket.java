@@ -7,10 +7,10 @@ import java.nio.ByteBuffer;
  */
 
 public class HoverPacket extends CrtpPacket {
-    private final float mYx;
-    private final float mYy;
-    private final float mYawrate;
-    private final float mZdistance;
+    public final float mYx;
+    public final float mYy;
+    public final float mYawrate;
+    public final float mZdistance;
 
     /**
      * Create a new commander packet.
