@@ -27,9 +27,7 @@
 
 package se.bitcraze.crazyflie.lib.crazyradio;
 
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -208,26 +206,20 @@ public class RadioDriver extends CrtpDriver {
 
         crazyRadio.setArc(1);
 
-//        crazyRadio.setDataRate(CrazyradioLink.DR_250KPS);
-//        List<Integer> scanRadioChannels250k = crazyRadio.scanChannels();
-//        for(Integer channel : scanRadioChannels250k) {
-//            connectionDataList.add(new ConnectionData(channel, CrazyradioLink.DR_250KPS));
-//        }
-//        crazyRadio.setDataRate(CrazyradioLink.DR_1MPS);
-//        List<Integer> scanRadioChannels1m = crazyRadio.scanChannels();
-//        for(Integer channel : scanRadioChannels1m) {
-//            connectionDataList.add(new ConnectionData(channel, CrazyradioLink.DR_1MPS));
-//        }
-//        crazyRadio.setDataRate(CrazyradioLink.DR_2MPS);
-//        List<Integer> scanRadioChannels2m = crazyRadio.scanChannels();
-//        for(Integer channel : scanRadioChannels2m) {
-//            connectionDataList.add(new ConnectionData(channel, CrazyradioLink.DR_2MPS));
-//        }
-
-        try {
-            connectionDataList = Arrays.asList(crazyRadio.scanChannels());
-        } catch (IOException e) {
-            mLogger.error(e.getMessage());
+        crazyRadio.setDatarate(Crazyradio.DR_250KPS);
+        List<Integer> scanRadioChannels250k = crazyRadio.scanChannels();
+        for(Integer channel : scanRadioChannels250k) {
+            connectionDataList.add(new ConnectionData(channel, Crazyradio.DR_250KPS));
+        }
+        crazyRadio.setDatarate(Crazyradio.DR_1MPS);
+        List<Integer> scanRadioChannels1m = crazyRadio.scanChannels();
+        for(Integer channel : scanRadioChannels1m) {
+            connectionDataList.add(new ConnectionData(channel, Crazyradio.DR_1MPS));
+        }
+        crazyRadio.setDatarate(Crazyradio.DR_2MPS);
+        List<Integer> scanRadioChannels2m = crazyRadio.scanChannels();
+        for(Integer channel : scanRadioChannels2m) {
+            connectionDataList.add(new ConnectionData(channel, Crazyradio.DR_2MPS));
         }
 
 //        crazyRadio.close();
@@ -236,11 +228,11 @@ public class RadioDriver extends CrtpDriver {
         return connectionDataList;
     }
 
-    public boolean scanSelected(int channel, int datarate, byte[] packet) {
+    public boolean scanSelected(ConnectionData connectionData, byte[] packet) {
         if (mCradio == null) {
             mCradio = new Crazyradio(mUsbInterface);
         }
-        return mCradio.scanSelected(channel, datarate, packet);
+        return mCradio.scanSelected(connectionData.getChannel(), connectionData.getDataRate(), packet);
     }
 
     public Crazyradio getRadio() {
@@ -285,7 +277,7 @@ public class RadioDriver extends CrtpDriver {
          * Run the receiver thread
          *
          * (non-Javadoc)
-         * @see java.lang.Runnable#run()
+         * @see Runnable#run()
          */
         public void run() {
             byte[] dataOut = Crazyradio.NULL_PACKET;

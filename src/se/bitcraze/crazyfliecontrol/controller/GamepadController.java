@@ -87,7 +87,7 @@ public class GamepadController extends AbstractController {
     private String mAlt2BtnDefaultValue;
     private String mHoverBtnDefaultValue;
 
-    private boolean mHover = false;
+    public boolean mHover = false;
 
     public GamepadController(Controls controls, MainActivity activity, SharedPreferences preferences) {
         super(controls, activity);
@@ -136,19 +136,17 @@ public class GamepadController extends AbstractController {
             } else if (event.getKeyCode() == mAlt2Btn) {
                 mActivity.runAltAction(mControls.getAlt2Action());
             } else if (event.getKeyCode() == mHoverBtn) {
-                // workaround until BleLink supports param subsystem
-                if (mActivity.getCrazyflie() != null && mActivity.getCrazyflie().getDriver() instanceof RadioDriver) {
+                if (mActivity.getCrazyflie() != null) {
                     mHover = true;
-                    mActivity.enableAltHoldMode(mHover);
+                    //mActivity.enableAltHoldMode(mHover);
                 }
             }
             break;
         case KeyEvent.ACTION_UP:
             if(event.getKeyCode() == mHoverBtn) {
-                // workaround until BleLink supports param subsystem
-                if (mActivity.getCrazyflie() != null && mActivity.getCrazyflie().getDriver() instanceof RadioDriver) {
+                if (mActivity.getCrazyflie() != null) {
                     mHover = false;
-                    mActivity.enableAltHoldMode(mHover);
+                    //mActivity.enableAltHoldMode(mHover);
                 }
             }
             break;

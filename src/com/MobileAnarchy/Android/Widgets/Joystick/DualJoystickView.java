@@ -44,7 +44,7 @@ public class DualJoystickView extends LinearLayout {
     }
 
     private void initDualJoystickView() {
-        setOrientation(LinearLayout.HORIZONTAL);
+        //setOrientation(LinearLayout.HORIZONTAL);
 
         if (D) {
             dbgPaint1 = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -59,7 +59,7 @@ public class DualJoystickView extends LinearLayout {
     public void setPreferences(SharedPreferences prefs){
         prefRatio = Float.parseFloat(prefs.getString(PreferencesActivity.KEY_PREF_JOYSTICK_SIZE, "100"));
         prefRatio/=100.0;
-        drawJoysticks();
+        //drawJoysticks();
     }
 
     @Override
@@ -68,7 +68,7 @@ public class DualJoystickView extends LinearLayout {
         mViewWidth = wNew;
         mViewHeight = hNew;
 
-        drawJoysticks();
+        //drawJoysticks();
     }
 
     private void drawJoysticks() {

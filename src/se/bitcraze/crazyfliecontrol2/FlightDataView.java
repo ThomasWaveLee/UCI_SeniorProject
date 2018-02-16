@@ -49,11 +49,11 @@ public class FlightDataView extends LinearLayout {
     public FlightDataView(Context context, AttributeSet attrs) {
         super(context, attrs);
 
-        setOrientation(LinearLayout.HORIZONTAL);
+        //setOrientation(LinearLayout.HORIZONTAL);
 
         LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         inflater.inflate(R.layout.view_flight_data, this, true);
-
+        /*
         mTextView_pitch = (TextView) findViewById(R.id.pitch);
         mTextView_roll = (TextView) findViewById(R.id.roll);
         mTextView_thrust = (TextView) findViewById(R.id.thrust);
@@ -63,6 +63,7 @@ public class FlightDataView extends LinearLayout {
         mTextView_roll.setText(format(R.string.roll, 0.0));
         mTextView_thrust.setText(format(R.string.thrust, 0.0));
         mTextView_yaw.setText(format(R.string.yaw, 0.0));
+        */
     }
 
     public FlightDataView(Context context) {
@@ -70,10 +71,12 @@ public class FlightDataView extends LinearLayout {
     }
 
     public void updateFlightData(float pitch, float roll, float thrust, float yaw) {
+        /*
         mTextView_pitch.setText(format(R.string.pitch, round(pitch)));
         mTextView_roll.setText(format(R.string.roll, round(roll)));
         mTextView_thrust.setText(format(R.string.thrust, round(thrust)));
         mTextView_yaw.setText(format(R.string.yaw, round(yaw)));
+        */
     }
 
     private String format(int identifier, Object o){
