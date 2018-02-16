@@ -51,7 +51,7 @@ public class Graph {
         for(Integer i : v){
             s += "\n";
             next = i.toString(i);
-            s += prev + " -> " + next +": ";
+            //s += prev + " -> " + next +": ";
             s += Integer.toString(adjMatrix[Integer.parseInt(prev)][i]) + ", ";
             s += Integer.toString(directionMatrix[Integer.parseInt(prev)][i]);
             prev = next;

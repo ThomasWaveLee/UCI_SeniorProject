@@ -51,8 +51,8 @@ public class MappingActivity extends Activity{
             public void onClick(View v){
                 Intent i = new Intent(MappingActivity.this, MainActivity.class);
                 i.putExtra("result", result);
-                startActivity(i);
-                // setResult(Activity.RESULT_OK, i);
+                setResult(Activity.RESULT_OK, i);
+                //startActivity(i);
                 finish();
             }
         });

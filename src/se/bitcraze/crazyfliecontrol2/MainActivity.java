@@ -140,14 +140,14 @@ public class MainActivity extends Activity {
     private Button mapButton;
     private String mapResult;
     private TextView mapResultText;
-    private Intent i;
+    private Intent intent;
 
     private ImageButton manualButton;
 
     private SeekBar distBar;
     private TextView distText;
     private float minDist = 0.1f;
-    private float maxDist = 1.5f;
+    private float maxDist = 0.2f;
     private float distance = minDist;
 
     private SeekBar speedBar;
@@ -233,16 +233,6 @@ public class MainActivity extends Activity {
             }
         });
 
-        //getting results from map activity
-        i = getIntent();
-        if(i.getExtras() != null){
-            mapResult = i.getExtras().getString("result");
-            mapResultText.setText(mapResult);
-            instructCrazyFlie(mapResult);
-        }
-
-
-
         IntentFilter filter = new IntentFilter();
         filter.addAction(this.getPackageName()+".USB_PERMISSION");
         filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
@@ -252,23 +242,64 @@ public class MainActivity extends Activity {
         initializeSounds();
 
         setCacheDir();
+
+        //getting results from map activity
+        /*
+        intent = getIntent();
+        if(intent != null && intent.getExtras() != null){
+            mapResult = intent.getExtras().getString("result");
+            mapResultText.setText(mapResult);
+            instructCrazyFlie(mapResult);
+        }
+        */
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data){
+        if(requestCode == 0){
+            if(resultCode == RESULT_OK){
+                mapResult = data.getStringExtra("result");
+                mapResultText.setText(mapResult);
+                instructCrazyFlie(mapResult);
+            }
+        }
     }
 
     private void instructCrazyFlie(String instructions){
-        /*
-        east = 0
+        /* east = 0
         north = 90
         west = 180
-        south = 270
+        south = 270 */
 
-         */
-
+        int orientation = 90;
         String[] commands = instructions.split("\n");
-        String[] command = new String[2];
-        for(int i=0; i<commands.length; i++){
+        String[] command;
+
+        for(int i=1; i<commands.length; i++){
             command = commands[i].split(", ");
+            int turn = Integer.parseInt(command[1]) - orientation;
+            if(turn>0 && turn<=180){
+                mPacketControl.turnLeft(turn, 18);
+            }
+            else if(turn>180 && turn<360){
+                mPacketControl.turnRight(180-turn, 18);
+            }
+            else{
+                turn *= -1;
+                if(turn>0 && turn<=180){
+                    mPacketControl.turnRight(turn, 18);
+                }
+                else if(turn>180 && turn<360){
+                    mPacketControl.turnLeft(180-turn, 18);
+                }
+            }
+            orientation = Integer.parseInt(command[1]);
+
+            //change to magnitude later
+            mPacketControl.goForward(.5f, .1f);
 
         }
+
 
 
     }
@@ -526,6 +557,7 @@ public class MainActivity extends Activity {
 
     @Override
     public void onResume() {
+        System.out.println("resuming");
         super.onResume();
         //TODO: improve
         PreferencesActivity.setDefaultJoystickSize(this);
