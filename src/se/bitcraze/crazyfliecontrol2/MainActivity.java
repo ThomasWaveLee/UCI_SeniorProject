@@ -34,9 +34,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
 import android.media.AudioManager;
@@ -48,7 +46,6 @@ import android.os.Environment;
 import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.util.Log;
-import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
@@ -58,14 +55,11 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.MobileAnarchy.Android.Widgets.Joystick.DualJoystickView;
-
 import lightingtheway.PacketControl;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -75,19 +69,14 @@ import se.bitcraze.crazyflie.lib.crazyflie.Crazyflie;
 import se.bitcraze.crazyflie.lib.crazyradio.ConnectionData;
 import se.bitcraze.crazyflie.lib.crazyradio.Crazyradio;
 import se.bitcraze.crazyflie.lib.crazyradio.RadioDriver;
-import se.bitcraze.crazyflie.lib.crtp.CommanderPacket;
 import se.bitcraze.crazyflie.lib.crtp.CrtpDriver;
 import se.bitcraze.crazyflie.lib.log.LogAdapter;
 import se.bitcraze.crazyflie.lib.log.LogConfig;
 import se.bitcraze.crazyflie.lib.log.Logg;
-import se.bitcraze.crazyflie.lib.param.ParamListener;
 import se.bitcraze.crazyflie.lib.toc.Toc;
 import se.bitcraze.crazyflie.lib.toc.VariableType;
 import se.bitcraze.crazyfliecontrol.controller.Controls;
-import se.bitcraze.crazyfliecontrol.controller.GamepadController;
-import se.bitcraze.crazyfliecontrol.controller.GyroscopeController;
 import se.bitcraze.crazyfliecontrol.controller.IController;
-import se.bitcraze.crazyfliecontrol.controller.TouchController;
 import se.bitcraze.crazyfliecontrol.prefs.PreferencesActivity;
 
 public class MainActivity extends Activity {
@@ -133,6 +122,7 @@ public class MainActivity extends Activity {
 
     private ImageButton mBuzzerSoundButton;
     private ImageButton mRampButton;
+
     private ImageButton mDeltaXUpButton;
     private ImageButton mDeltaXDownButton;
     private ImageButton mDeltaYUpButton;
@@ -141,15 +131,33 @@ public class MainActivity extends Activity {
     private ImageButton mLiftOffThreshDownButton;
     private ImageButton mHoverThreshUpButton;
     private ImageButton mHoverThreshDownButton;
+
     private File mCacheDir;
 
     private TextView mTextView_battery;
     private TextView mTextView_linkQuality;
 
     private Button mapButton;
+    private String mapResult;
+    private TextView mapResultText;
+    private Intent intent;
+
+    private ImageButton manualButton;
 
     private SeekBar distBar;
-    private TextView dist;
+    private TextView distText;
+    private float minDist = 0.1f;
+    private float maxDist = 0.2f;
+    private float distance = minDist;
+
+    private SeekBar speedBar;
+    private TextView speedText;
+    private float minSpeed = 0.1f;
+    private float maxSpeed = 1.0f;
+    private float speed = minSpeed;
+
+    //toggle testing buttons
+    boolean testing = false;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -175,6 +183,7 @@ public class MainActivity extends Activity {
         initializeMenuButtons();
 
         // testing tweak buttons
+
         mDeltaXUpButton = (ImageButton) findViewById(R.id.button_deltaXUp);
         mDeltaXDownButton = (ImageButton) findViewById(R.id.button_deltaXDown);
         mDeltaYUpButton = (ImageButton) findViewById(R.id.button_deltaYUp);
@@ -183,7 +192,8 @@ public class MainActivity extends Activity {
         mLiftOffThreshDownButton = (ImageButton) findViewById(R.id.button_LiftOffDown);
         mHoverThreshUpButton = (ImageButton) findViewById(R.id.button_HoverUp);
         mHoverThreshDownButton = (ImageButton) findViewById(R.id.button_HoverDown);
-        intitializeTestingButtons();
+        initializeTestingButtons();
+
 
         //action buttons
         //mRingEffectButton = (ImageButton) findViewById(R.id.button_ledRing);
@@ -192,16 +202,34 @@ public class MainActivity extends Activity {
 
         //distance bar
         distBar = (SeekBar) findViewById(R.id.distBar);
-        dist = (TextView) findViewById(R.id.distText);
+        distText = (TextView) findViewById(R.id.distText);
+        //speed bar
+        speedBar = (SeekBar) findViewById(R.id.speedBar);
+        speedText = (TextView) findViewById(R.id.speedText);
         initializeSeekBar();
 
-        //Acitivity switch button
+        //Activity switch button
         mapButton = (Button) findViewById(R.id.button_map);
         mapButton.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View v){
                 Intent intent = new Intent(MainActivity.this, MappingActivity.class);
-                startActivity(intent);
+                startActivityForResult(intent, 0);
+            }
+        });
+        mapResultText = (TextView) findViewById(R.id.mapResult);
+
+        manualButton = (ImageButton) findViewById(R.id.button_manual);
+        manualButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(testing){
+                    initializeTestingButtons();
+                }
+                else {
+                    enableTestingButtons();
+                }
+                testing = !testing;
             }
         });
 
@@ -214,6 +242,66 @@ public class MainActivity extends Activity {
         initializeSounds();
 
         setCacheDir();
+
+        //getting results from map activity
+        /*
+        intent = getIntent();
+        if(intent != null && intent.getExtras() != null){
+            mapResult = intent.getExtras().getString("result");
+            mapResultText.setText(mapResult);
+            instructCrazyFlie(mapResult);
+        }
+        */
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data){
+        if(requestCode == 0){
+            if(resultCode == RESULT_OK){
+                mapResult = data.getStringExtra("result");
+                mapResultText.setText(mapResult);
+                instructCrazyFlie(mapResult);
+            }
+        }
+    }
+
+    private void instructCrazyFlie(String instructions){
+        /* east = 0
+        north = 90
+        west = 180
+        south = 270 */
+
+        int orientation = 90;
+        String[] commands = instructions.split("\n");
+        String[] command;
+
+        for(int i=1; i<commands.length; i++){
+            command = commands[i].split(", ");
+            int turn = Integer.parseInt(command[1]) - orientation;
+            if(turn>0 && turn<=180){
+                mPacketControl.turnLeft(turn, 18);
+            }
+            else if(turn>180 && turn<360){
+                mPacketControl.turnRight(180-turn, 18);
+            }
+            else{
+                turn *= -1;
+                if(turn>0 && turn<=180){
+                    mPacketControl.turnRight(turn, 18);
+                }
+                else if(turn>180 && turn<360){
+                    mPacketControl.turnLeft(180-turn, 18);
+                }
+            }
+            orientation = Integer.parseInt(command[1]);
+
+            //change to magnitude later
+            mPacketControl.goForward(.5f, .1f);
+
+        }
+
+
+
     }
 
     private void initializeSounds() {
@@ -325,12 +413,38 @@ public class MainActivity extends Activity {
     }
 
     private void initializeSeekBar(){
-        distBar.setProgress(50);
-        dist.setText("50");
+        distBar.setProgress(0);
+        distText.setText(String.format("%.2f", distance));
         distBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                dist.setText(String.valueOf(new Integer(progress)));
+                float percentage = (float)progress/100;
+                distance = percentage*(maxDist-minDist);
+                distance += minDist;
+                mPacketControl.setmZdistance(distance);
+                distText.setText(String.format("%.2f", distance));
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
+
+        speedBar.setProgress(0);
+        speedText.setText(String.format("%.2f", speed));
+        speedBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                float percentage = (float)progress/100;
+                speed = percentage*(maxSpeed-minSpeed);
+                speed += minSpeed;
+                speedText.setText(String.format("%.2f", speed));
             }
 
             @Override
@@ -345,16 +459,39 @@ public class MainActivity extends Activity {
         });
     }
 
-    public void intitializeTestingButtons(){
+
+    public void initializeTestingButtons(){
 
         // testing tweak buttons
+        mDeltaXUpButton.setVisibility(View.INVISIBLE);
+        mDeltaXDownButton.setVisibility(View.INVISIBLE);
+        mDeltaYUpButton.setVisibility(View.INVISIBLE);
+        mDeltaYDownButton.setVisibility(View.INVISIBLE);
+        mLiftOffThreshUpButton.setVisibility(View.INVISIBLE);
+        mLiftOffThreshDownButton.setVisibility(View.INVISIBLE);
+        mHoverThreshUpButton.setVisibility(View.INVISIBLE);
+        mHoverThreshDownButton.setVisibility(View.INVISIBLE);
+
+        mDeltaXUpButton.setEnabled(false);
+        mDeltaXDownButton.setEnabled(false);
+        mDeltaYUpButton.setEnabled(false);
+        mDeltaYDownButton.setEnabled(false);
+        mLiftOffThreshUpButton.setEnabled(false);
+        mLiftOffThreshDownButton.setEnabled(false);
+        mHoverThreshUpButton.setEnabled(false);
+        mHoverThreshDownButton.setEnabled(false);
+    }
+
+    public void enableTestingButtons(){
+        mDeltaXUpButton.setVisibility(View.VISIBLE);
         mDeltaXUpButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-               // mPacketControl.incrementVx(0.1f);
+                // mPacketControl.incrementVx(0.1f);
                 mPacketControl.goRight(.5f,.1f);
             }
         });
+        mDeltaXDownButton.setVisibility(View.VISIBLE);
         mDeltaXDownButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -362,6 +499,7 @@ public class MainActivity extends Activity {
                 mPacketControl.goLeft(.5f,.1f);
             }
         });
+        mDeltaYUpButton.setVisibility(View.VISIBLE);
         mDeltaYUpButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -369,6 +507,7 @@ public class MainActivity extends Activity {
                 mPacketControl.goForward(.5f,.1f);
             }
         });
+        mDeltaYDownButton.setVisibility(View.VISIBLE);
         mDeltaYDownButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -376,24 +515,28 @@ public class MainActivity extends Activity {
                 mPacketControl.goBack(.5f,.1f);
             }
         });
+        mLiftOffThreshUpButton.setVisibility(View.VISIBLE);
         mLiftOffThreshUpButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 mPacketControl.turnLeft(90,18);
             }
         });
+        mLiftOffThreshDownButton.setVisibility(View.VISIBLE);
         mLiftOffThreshDownButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 mPacketControl.turnRight(90,18);
             }
         });
+        mHoverThreshUpButton.setVisibility(View.VISIBLE);
         mHoverThreshUpButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 mPacketControl.incrementZDistance(.1f);
             }
         });
+        mHoverThreshDownButton.setVisibility(View.VISIBLE);
         mHoverThreshDownButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -409,11 +552,12 @@ public class MainActivity extends Activity {
         mLiftOffThreshDownButton.setEnabled(true);
         mHoverThreshUpButton.setEnabled(true);
         mHoverThreshDownButton.setEnabled(true);
-
     }
+
 
     @Override
     public void onResume() {
+        System.out.println("resuming");
         super.onResume();
         //TODO: improve
         PreferencesActivity.setDefaultJoystickSize(this);
@@ -439,7 +583,7 @@ public class MainActivity extends Activity {
     protected void onPause() {
         super.onPause();
         mControls.resetAxisValues();
-        disconnect();
+        //disconnect();
     }
 
     @Override

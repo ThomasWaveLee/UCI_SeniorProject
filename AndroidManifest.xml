@@ -61,7 +61,8 @@
         </activity>
         <activity
             android:name=".MappingActivity"
-            android:label="@string/title_activity_mapping"></activity>
+            android:label="@string/title_activity_mapping" />
+        <activity android:name=".ManualActivity"></activity>
     </application>
 
 </manifest>

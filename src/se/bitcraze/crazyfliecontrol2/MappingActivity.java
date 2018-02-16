@@ -9,7 +9,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-public class MappingActivity extends Activity {
+public class MappingActivity extends Activity{
 
     private Button mainButton;
     private Button calculateButton;
@@ -18,6 +18,7 @@ public class MappingActivity extends Activity {
     private Graph graph;
     private LinearLayout linearLayout;
     private MappingView mappingView;
+    private String result = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,6 +42,8 @@ public class MappingActivity extends Activity {
                 String s = startDestEntryText.getText().toString();
                 String[] inputs = s.split(",");
                 String result = "";
+
+
                 /*Compute direction vectors*/
                 try {
                     result = graph.getDirections(Integer.parseInt(inputs[0]), Integer.parseInt(inputs[1]));
@@ -55,12 +58,13 @@ public class MappingActivity extends Activity {
         mainButton.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View v){
-                Intent i = new Intent();
+                Intent i = new Intent(MappingActivity.this, MainActivity.class);
+                i.putExtra("result", result);
                 setResult(Activity.RESULT_OK, i);
+                //startActivity(i);
                 finish();
             }
         });
     }
-
     Graph getGraph(){ return graph;}
 }

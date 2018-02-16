@@ -1,10 +1,13 @@
 package lightingtheway;
 
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.widget.Toast;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.PriorityQueue;
 
@@ -15,7 +18,7 @@ import se.bitcraze.crazyflie.lib.crtp.HoverPacket;
 import se.bitcraze.crazyfliecontrol.controller.Controls;
 
 
-public class PacketControl {
+public class PacketControl implements Serializable{
 
     final Logger mLogger = LoggerFactory.getLogger("PacketControl");
 
@@ -394,6 +397,8 @@ public class PacketControl {
     public void setYaw(int yaw){
         mYaw = yaw;
     }
+
+    public void setmZdistance(float mZdistance){this.mZdistance = mZdistance;}
 
     public void incrementThrust(int thrust){
         if(mThrust + thrust <= absMaxThrust*mMaxThrust) {
