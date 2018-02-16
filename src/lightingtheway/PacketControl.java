@@ -139,10 +139,10 @@ public class PacketControl {
                     mVy = -velocity;
                     break;
                 case TURN_LEFT:
-                    mHoverPacket = new HoverPacket(0,0,yawRate,mZdistance);
+                    mHoverPacket = new HoverPacket(0,0,-yawRate,mZdistance);
                     break;
                 case TURN_RIGHT:
-                    mHoverPacket = new HoverPacket(0,0,-yawRate,mZdistance);
+                    mHoverPacket = new HoverPacket(0,0,yawRate,mZdistance);
                     break;
                 case UP:
                 default:
