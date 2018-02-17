@@ -41,7 +41,7 @@ public class MappingActivity extends Activity{
                 directionsTextView.setText(" ");
                 String s = startDestEntryText.getText().toString();
                 String[] inputs = s.split(",");
-                String result = "";
+                result = "";
 
 
                 /*Compute direction vectors*/
@@ -58,9 +58,9 @@ public class MappingActivity extends Activity{
         mainButton.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View v){
-                Intent i = new Intent(MappingActivity.this, MainActivity.class);
-                i.putExtra("result", result);
-                setResult(Activity.RESULT_OK, i);
+                Intent intent = new Intent(MappingActivity.this, MainActivity.class);
+                intent.putExtra("result", result);
+                setResult(Activity.RESULT_OK, intent);
                 //startActivity(i);
                 finish();
             }

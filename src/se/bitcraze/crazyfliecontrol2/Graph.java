@@ -136,9 +136,9 @@ public class Graph {
         if(dest.parent == null)
             return "";
         else{
-            return directions(dest.parent) + "\n"+
+            return directions(dest.parent) + "\n" + /*
                     dest.parent.name + " -> " + dest.name +
-                    " : " + dest.distToParent + ", " + dest.directionToParent;
+                    " : " + */dest.distToParent + ", " + dest.directionToParent;
         }
     }
 

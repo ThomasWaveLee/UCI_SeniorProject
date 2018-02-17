@@ -252,6 +252,7 @@ public class MainActivity extends Activity {
             instructCrazyFlie(mapResult);
         }
         */
+
     }
 
     @Override
@@ -271,29 +272,37 @@ public class MainActivity extends Activity {
         west = 180
         south = 270 */
 
-        int orientation = 90;
+        float orientation = 90.0f;
         String[] commands = instructions.split("\n");
         String[] command;
 
         for(int i=1; i<commands.length; i++){
             command = commands[i].split(", ");
-            int turn = Integer.parseInt(command[1]) - orientation;
+            //System.out.println(Float.parseFloat(command[1]));
+            float turn = Float.parseFloat(command[1]) - orientation;
+            //System.out.println(turn);
             if(turn>0 && turn<=180){
                 mPacketControl.turnLeft(turn, 18);
+                System.out.println("Turn left: " + turn);
             }
             else if(turn>180 && turn<360){
-                mPacketControl.turnRight(180-turn, 18);
+                mPacketControl.turnRight(180.0f-turn, 18);
+                turn = 180.0f-turn;
+                System.out.println("Turn right: " + turn);
             }
             else{
                 turn *= -1;
                 if(turn>0 && turn<=180){
                     mPacketControl.turnRight(turn, 18);
+                    System.out.println("Turn right: " + turn);
                 }
                 else if(turn>180 && turn<360){
-                    mPacketControl.turnLeft(180-turn, 18);
+                    mPacketControl.turnLeft(180.0f-turn, 18);
+                    turn = 180.0f-turn;
+                    System.out.println("Turn left: " + turn);
                 }
             }
-            orientation = Integer.parseInt(command[1]);
+            orientation = Float.parseFloat(command[1]);
 
             //change to magnitude later
             mPacketControl.goForward(.5f, .1f);
