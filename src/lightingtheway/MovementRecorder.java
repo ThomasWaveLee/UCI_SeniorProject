@@ -26,7 +26,7 @@ public class MovementRecorder {
         incrementX(dx);
         incrementY(dy);
         incrementAngle(dA);
-        mLogger.debug(toString());
+        //mLogger.debug(toString());
     }
 
     public String toString(){
