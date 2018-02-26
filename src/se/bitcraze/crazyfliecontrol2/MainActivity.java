@@ -320,23 +320,23 @@ public class MainActivity extends Activity {
             //System.out.println(turn);
             if(turn>0 && turn<=180){
                 mPacketControl.turnLeft(turn, 18);
-                System.out.println("Turn left: " + turn);
+                //System.out.println("Turn left: " + turn);
             }
             else if(turn>180 && turn<360){
                 mPacketControl.turnRight(180.0f-turn, 18);
                 turn = 180.0f-turn;
-                System.out.println("Turn right: " + turn);
+                //System.out.println("Turn right: " + turn);
             }
             else{
                 turn *= -1;
                 if(turn>0 && turn<=180){
                     mPacketControl.turnRight(turn, 18);
-                    System.out.println("Turn right: " + turn);
+                    //System.out.println("Turn right: " + turn);
                 }
                 else if(turn>180 && turn<360){
                     mPacketControl.turnLeft(180.0f-turn, 18);
                     turn = 180.0f-turn;
-                    System.out.println("Turn left: " + turn);
+                    //System.out.println("Turn left: " + turn);
                 }
             }
             orientation = newOrientation;
