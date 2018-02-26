@@ -140,9 +140,10 @@ public class MainActivity extends Activity {
     private Button mapButton;
     private String mapResult;
     private TextView mapResultText;
-    private Intent intent;
 
     private ImageButton manualButton;
+
+    private Button goButton;
 
     private SeekBar distBar;
     private TextView distText;
@@ -233,6 +234,9 @@ public class MainActivity extends Activity {
             }
         });
 
+        goButton = (Button) findViewById(R.id.button_go);
+        goButton.setVisibility(View.INVISIBLE);
+
         IntentFilter filter = new IntentFilter();
         filter.addAction(this.getPackageName()+".USB_PERMISSION");
         filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
@@ -243,16 +247,6 @@ public class MainActivity extends Activity {
 
         setCacheDir();
 
-        //getting results from map activity
-        /*
-        intent = getIntent();
-        if(intent != null && intent.getExtras() != null){
-            mapResult = intent.getExtras().getString("result");
-            mapResultText.setText(mapResult);
-            instructCrazyFlie(mapResult);
-        }
-        */
-
     }
 
     @Override
@@ -260,8 +254,45 @@ public class MainActivity extends Activity {
         if(requestCode == 0){
             if(resultCode == RESULT_OK){
                 mapResult = data.getStringExtra("result");
+
+                /* testing text box and passing string between activities, remove later */
                 mapResultText.setText(mapResult);
-                instructCrazyFlie(mapResult);
+
+                /* if map result has instructions, reveal GO button */
+                if(mapResult.length() > 1 && mapResult.substring(3,5).equals("->")){
+                    goButton.setVisibility(View.VISIBLE);
+                    goButton.setOnClickListener(new View.OnClickListener(){
+                        @Override
+                        public void onClick(View v){
+                            /* ramp sequence */
+                            Log.d(LOG_TAG, "RampButton clicked");
+                            if (mCrazyflie != null) {
+                                if (!mRampToggle) {
+                                    Log.d(LOG_TAG, "Ramp - start");
+                                    if (mSendJoystickDataThread != null) {
+                                        mSendJoystickDataThread.interrupt();
+                                        mSendJoystickDataThread = null;
+                                    }
+                                    mRampButton.setBackgroundDrawable(getResources().getDrawable(R.drawable.custom_button_connected_ble));
+                                    startRampSequence();
+                                } else {
+                                    Log.d(LOG_TAG, "Ramp - land");
+                                    mRampButton.setBackgroundDrawable(getResources().getDrawable(R.drawable.custom_button));
+                                    startLandSequence();
+                                }
+                                mRampToggle = !mRampToggle;
+                            } else {
+                                Log.d(LOG_TAG, "Thinks crazyflie is null or not connected");
+                            }
+
+                            /* send commands to crazyflie */
+                            instructCrazyFlie(mapResult);
+                        }
+                    });
+                }
+                else{
+                    goButton.setVisibility(View.INVISIBLE);
+                }
             }
         }
     }
@@ -273,13 +304,19 @@ public class MainActivity extends Activity {
         south = 270 */
 
         float orientation = 90.0f;
-        String[] commands = instructions.split("\n");
-        String[] command;
+        String[] allCommands = instructions.split("\n");
+        String[] command; /* 2 elements, nodes and vector */
+        String[] nodes; /* 2 elements, 0=src, 1=dest */
+        String[] magDir; /*2 elements, 0=magnitude, 1=direction */
+        float turn;
+        float newOrientation;
 
-        for(int i=1; i<commands.length; i++){
-            command = commands[i].split(", ");
-            //System.out.println(Float.parseFloat(command[1]));
-            float turn = Float.parseFloat(command[1]) - orientation;
+        for(int i=1; i<allCommands.length; i++){
+            command = allCommands[i].split(" : ");
+            nodes = command[0].split(" -> ");
+            magDir = command[1].split(", ");
+            newOrientation = Float.parseFloat(magDir[1]);
+            turn = newOrientation - orientation;
             //System.out.println(turn);
             if(turn>0 && turn<=180){
                 mPacketControl.turnLeft(turn, 18);
@@ -302,7 +339,7 @@ public class MainActivity extends Activity {
                     System.out.println("Turn left: " + turn);
                 }
             }
-            orientation = Float.parseFloat(command[1]);
+            orientation = newOrientation;
 
             //change to magnitude later
             mPacketControl.goForward(.5f, .1f);
@@ -385,6 +422,7 @@ public class MainActivity extends Activity {
         });
 
         ImageButton settingsButton = (ImageButton) findViewById(R.id.imageButton_settings);
+        settingsButton.setVisibility(View.INVISIBLE);
         settingsButton.setOnClickListener(new View.OnClickListener() {
 
             @Override

@@ -68,9 +68,8 @@
         android:id="@+id/imageButton_settings"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_alignStart="@+id/button_HoverDown"
         android:layout_alignTop="@+id/imageButton_connect"
-        android:layout_marginStart="20dp"
-        android:layout_toEndOf="@+id/imageButton_connect"
         android:background="@drawable/custom_button"
         android:contentDescription="@string/menu_preferences_ContentDescription"
         android:elevation="2dp"
@@ -107,15 +106,15 @@
         android:layout_width="200dp"
         android:layout_height="wrap_content"
         android:layout_above="@+id/speedBar"
-        android:layout_alignStart="@+id/speedBar" />
+        android:layout_alignEnd="@+id/button_manual" />
 
     <SeekBar
         android:id="@+id/speedBar"
         android:layout_width="200dp"
         android:layout_height="wrap_content"
-        android:layout_above="@+id/imageButton_settings"
-        android:layout_alignStart="@+id/imageButton_settings"
-        android:layout_marginBottom="44dp" />
+        android:layout_above="@+id/button_go"
+        android:layout_marginBottom="35dp"
+        android:layout_toEndOf="@+id/distLabel" />
 
     <TextView
         android:id="@+id/distText"
@@ -176,8 +175,8 @@
         android:id="@+id/button_manual"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignEnd="@+id/speedBar"
-        android:layout_alignTop="@+id/imageButton_settings"
+        android:layout_below="@+id/speedBar"
+        android:layout_toEndOf="@+id/button_LiftOffDown"
         android:src="@android:drawable/ic_menu_compass" />
 
     <ImageButton
@@ -267,5 +266,13 @@
         android:layout_alignStart="@+id/battery_icon"
         android:layout_alignTop="@+id/button_deltaYUp"
         android:layout_toStartOf="@+id/imageButton_settings" />
+
+    <Button
+        android:id="@+id/button_go"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@+id/imageButton_settings"
+        android:layout_centerHorizontal="true"
+        android:text="Go!" />
 
 </RelativeLayout>
