@@ -1,4 +1,4 @@
-package se.bitcraze.crazyfliecontrol2;
+package lightingtheway;
 
 
 import android.graphics.Point;
@@ -15,20 +15,22 @@ public class Graph {
     private Vector<Node> nodeTable;
     private int numOfNodes;
 
-    Graph(){
+    public Graph(){
         numOfNodes = 5+2;
     }
-    int getNumOfNodes(){
+
+    public int getNumOfNodes(){
         return numOfNodes;
     }
-    Vector<Node> getAllNodes(){
+
+    public Vector<Node> getAllNodes(){
         return nodeTable;
     }
     /*
     In the future, this function can take an input floor plan
     and create a graph
     */
-    Graph init(){
+    public Graph init(){
         /*Test map:
 
          .....................................[E]...................
@@ -57,13 +59,13 @@ public class Graph {
         return this;
     }
 
-    class Node implements Comparable<Node>{
+    public class Node implements Comparable<Node>{
         int ID;
-        String name;
+        public String name;
         boolean isDrawn;
 
         /*These are node coordinates. Used for drawing on canvas*/
-        Point coordinate;
+        public Point coordinate;
 
         /*This points to the parent after calculating Dijkstra*/
         Node parent;
@@ -78,8 +80,8 @@ public class Graph {
         by Dijkstra*/
         double minDistance;
 
-        LinkedList<Node> adjList;
-        ArrayList<Edge> edgeList;
+        public LinkedList<Node> adjList;
+        public ArrayList<Edge> edgeList;
 
         Node(int ID, String n, int x, int y){
             this.ID = ID;
@@ -96,7 +98,7 @@ public class Graph {
         }
     }
 
-    class Edge{
+    public class Edge{
         /*DISTANCE
         Unit distance between nodes
         */
@@ -113,7 +115,7 @@ public class Graph {
         */
         double direction;
 
-        Node target;
+        public Node target;
 
         Edge(double dist, double direction, Node dest){
             this.distance = dist;
@@ -186,15 +188,15 @@ public class Graph {
         }
     }
 
-    String getDirections(int srcNodeID, int destNodeID){
+    public String getDirections(int srcNodeID, int destNodeID){
         return getDirections(getNode(srcNodeID), getNode(destNodeID));
     }
 
-    String getDirections(String srcNodeName, String destNodeName){
+    public String getDirections(String srcNodeName, String destNodeName){
         return getDirections(getNode(srcNodeName), getNode(destNodeName));
     }
 
-    String getDirections(Node src, Node dest){
+    public String getDirections(Node src, Node dest){
         /*Execute dijkstra*/
         try{
             dijkstra(src);
