@@ -10,6 +10,8 @@ import org.slf4j.LoggerFactory;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.PriorityQueue;
+import java.util.Queue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import se.bitcraze.crazyflie.lib.crazyflie.Crazyflie;
 import se.bitcraze.crazyflie.lib.crtp.CommanderPacket;
@@ -52,7 +54,7 @@ public class PacketControl implements Serializable{
     private Crazyflie mCrazyFlie;
     private Controls mControls;
 
-    private PriorityQueue<CfCommand> mQueue = new PriorityQueue<>(20);
+    private Queue<CfCommand> mQueue = new LinkedBlockingQueue<>(20);
 
     private MovementRecorder mMovementRecorder = new MovementRecorder();
 
@@ -275,6 +277,7 @@ public class PacketControl implements Serializable{
                                     currentCommand.mHoverPacket = new HoverPacket(currentCommand.mHoverPacket,mZdistance);
                                     mCrazyFlie.sendPacket(currentCommand.mHoverPacket);
                                     timeLeft = currentCommand.mTime;
+                                    mLogger.debug("New packet: " + currentCommand.mHoverPacket);
                                 }
                             } else {
                                 // send pckt and update remaining time
