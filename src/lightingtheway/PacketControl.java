@@ -25,7 +25,7 @@ public class PacketControl implements Serializable{
     final Logger mLogger = LoggerFactory.getLogger("PacketControl");
 
     private enum STATE {
-        GROUNDED, LIFTOFF, CALIBRATING, FLYING, LANDING
+        GROUNDED, LIFTOFF, CALIBRATING, FLYING, LANDING, BACKTRACKING
     }
 
     public STATE mState = STATE.GROUNDED;
@@ -56,7 +56,12 @@ public class PacketControl implements Serializable{
 
     private Queue<CfCommand> mQueue = new LinkedBlockingQueue<>(20);
 
-    private MovementRecorder mMovementRecorder = new MovementRecorder();
+    private MovementRecorder mMovementRecorder;
+
+    // Set to true when user detected out of range.
+    private boolean mBacktrackUser = false;
+
+    private CfCommand mCurrentCommand = new CfCommand();
 
     // Thread to run when set to auto flight
     private Thread mPacketSender;
@@ -254,55 +259,72 @@ public class PacketControl implements Serializable{
         return mQueue.poll();
     }
 
+    // Creates and returns a new packetSenderThread.
+    Thread createPacketSenderThread() {
+        return new Thread(new Runnable() {
+            @Override
+            public void run() {
+                // init for compiler
+                float timeLeft = -1;
+                while (mCrazyFlie != null) {
+                    // If not grounded then look at queue
+                    if (mState != STATE.GROUNDED) {
+                        if(!mBacktrackUser) {
+                            timeLeft = moveTowardsDestination(timeLeft);
+                        } else {
+                            backtrackToUser();
+                        }
+                    }
+                    try {
+                        Thread.sleep(gCommandRate);
+                    } catch (InterruptedException e) {
+                        break;
+                    }
+                }
+            }
+        });
+    }
+
+    public void backtrackToUser(){
+        return;
+    }
+
+    public float moveTowardsDestination(float timeLeft){
+        // if we have no time left on current packet then look at nxt packet
+        if (timeLeft < 0) {
+            mCurrentCommand = getNextCommand();
+            // if nothing in queue then hover w/ default settings
+            if (mCurrentCommand == null) {
+                mCrazyFlie.sendPacket(new HoverPacket(0, 0, 0, mZdistance));
+            } else {
+                mCurrentCommand.mHoverPacket = new HoverPacket(mCurrentCommand.mHoverPacket, mZdistance);
+                mCrazyFlie.sendPacket(mCurrentCommand.mHoverPacket);
+                //mLogger.debug("New packet: " + mCurrentCommand.mHoverPacket);
+                return mCurrentCommand.mTime;
+            }
+        } else {
+            // send pckt and update remaining time
+            mCrazyFlie.sendPacket(mCurrentCommand.mHoverPacket);
+            mCurrentCommand.mRemainingTime -= gCommandRate;
+
+            // update app-side drone position
+            // movementRecorder holds position data in meters
+            //      need to divide by 1000 since gCommandRate is in ms and mVx is in m/s
+            mMovementRecorder.incrementDroneAll(mCurrentCommand.mVx * gCommandRate / 1000.0,
+                    mCurrentCommand.mVy * gCommandRate / 1000.0,
+                    mCurrentCommand.mYawrate * gCommandRate / 1000.0);
+            return mCurrentCommand.mRemainingTime;
+
+            // mLogger.debug(currentCommand + " , TimeLeft: " + timeLeft);
+        }
+        return -1;
+    }
+
     // if crayzflie is GROUNDED then it will start the packet sender thread
     public void liftOff(){
         if (mState == STATE.GROUNDED){
             mLogger.debug("[PacketControl]: liftOff Called!");
-            mPacketSender = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    // init for compiler
-                    CfCommand currentCommand = new CfCommand();
-                    float timeLeft = -1;
-                    while (mCrazyFlie != null) {
-                        // If not grounded then look at queue
-                        if (mState != STATE.GROUNDED) {
-                            // if we have no time left on current packet then look at nxt packet
-                            if (timeLeft < 0) {
-                                currentCommand = getNextCommand();
-                                // if nothing in queue then hover w/ default settings
-                                if (currentCommand == null) {
-                                    mCrazyFlie.sendPacket(new HoverPacket(0, 0, 0, mZdistance));
-                                } else {
-                                    currentCommand.mHoverPacket = new HoverPacket(currentCommand.mHoverPacket,mZdistance);
-                                    mCrazyFlie.sendPacket(currentCommand.mHoverPacket);
-                                    timeLeft = currentCommand.mTime;
-                                    mLogger.debug("New packet: " + currentCommand.mHoverPacket);
-                                }
-                            } else {
-                                // send pckt and update remaining time
-                                mCrazyFlie.sendPacket(currentCommand.mHoverPacket);
-                                currentCommand.mRemainingTime -= gCommandRate;
-                                timeLeft = currentCommand.mRemainingTime;
-
-                                // update app-side drone position
-                                // movementRecorder holds position data in meters
-                                //      need to divide by 1000 since gCommandRate is in ms and mVx is in m/s
-                                mMovementRecorder.incrementAll(currentCommand.mVx*gCommandRate/1000.0,
-                                        currentCommand.mVy*gCommandRate/1000.0,
-                                        currentCommand.mYawrate*gCommandRate/1000.0);
-
-                               // mLogger.debug(currentCommand + " , TimeLeft: " + timeLeft);
-                            }
-                        }
-                        try {
-                            Thread.sleep(gCommandRate);
-                        } catch (InterruptedException e) {
-                            break;
-                        }
-                    }
-                }
-            });
+            mPacketSender = createPacketSenderThread();
             /*
             mState = STATE.LIFTOFF;
             mThrust = mLiftOffThrust / 2.0f;
@@ -340,11 +362,6 @@ public class PacketControl implements Serializable{
             mYawRate = 0;
             mQueue.clear();
             mCrazyFlie.sendPacket(new HoverPacket(0,0,0,gBaseHeight));
-            try{
-                Thread.sleep(gCommandRate*5);
-            } catch (Exception e) {}
-
-            mCrazyFlie.sendPacket(new CommanderPacket(0, 0, 0, (char) (0.0f), mControls.isXmode()));
             mState = STATE.GROUNDED;
         } else {
             mLogger.debug("[PacketControl]: Not Airborn!");
@@ -389,6 +406,16 @@ public class PacketControl implements Serializable{
         mLogger.debug("HoverThrustControlFactor Set to: " + mHoverThrustControlFactor);
     }
 
+    public void incrementThrust(int thrust){
+        if(mThrust + thrust <= absMaxThrust*mMaxThrust) {
+            mThrust += thrust;
+        }
+    }
+
+    /**  Setter functions **/
+
+    public void setBacktrack(boolean b) { mBacktrackUser = b; }
+
     public void setRoll(int roll){
         mRoll= roll;
     }
@@ -403,14 +430,8 @@ public class PacketControl implements Serializable{
 
     public void setmZdistance(float mZdistance){this.mZdistance = mZdistance;}
 
-    public void incrementThrust(int thrust){
-        if(mThrust + thrust <= absMaxThrust*mMaxThrust) {
-            mThrust += thrust;
-        }
-    }
+    public void setMovementRecorder(MovementRecorder mr){mMovementRecorder = mr;}
 
-
-    /**  Setter functions **/
     public void setMaxThrust(float thrust){
          mMaxThrust = thrust;
     }

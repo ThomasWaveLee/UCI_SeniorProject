@@ -55,6 +55,7 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import lightingtheway.MovementRecorder;
 import lightingtheway.PacketControl;
 
 import java.io.File;
@@ -84,6 +85,7 @@ public class MainActivity extends Activity {
     private static final String LOG_TAG = "CrazyflieControl";
 
     private PacketControl mPacketControl;
+    private MovementRecorder mMovementRecorder = new MovementRecorder();
 
     private Crazyflie mCrazyflie;
     private CrtpDriver mDriver;
@@ -101,6 +103,7 @@ public class MainActivity extends Activity {
     private boolean mDoubleBackToExitPressedOnce = false;
 
     private Thread mSendJoystickDataThread;
+
     private Thread mAutoFlightThread;
     private boolean mAutoFlightMode = false;
 
@@ -177,6 +180,7 @@ public class MainActivity extends Activity {
         mControls.setDefaultPreferenceValues(getResources());
 
         mPacketControl = new PacketControl();
+        mPacketControl.setMovementRecorder(mMovementRecorder);
 
         //initialize buttons
         mToggleConnectButton = (ImageButton) findViewById(R.id.imageButton_connect);
@@ -338,6 +342,10 @@ public class MainActivity extends Activity {
                     turn = 180.0f-turn;
                     //System.out.println("Turn left: " + turn);
                 }
+            }
+            orientation = Float.parseFloat(command[1]);
+            if( i == 1 ) {
+                mMovementRecorder.setCurrentDroneAngle(orientation);
             }
             orientation = newOrientation;
 
@@ -1102,10 +1110,18 @@ public class MainActivity extends Activity {
                 final int deltaX = data.get("motion.deltaX").intValue();
                 final int deltaY = data.get("motion.deltaY").intValue();
                 final int zrange = data.get("range.zrange").intValue();
+                final float stateX = data.get("kalman.stateX").floatValue();
+                final float stateY = data.get("kalman.stateY").floatValue();
+                final float stateZ = data.get("kalman.stateZ").floatValue();
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         setBatteryLevel(battery);
+                        Log.d(LOG_TAG, "\t deltaX: " + deltaX);
+                        Log.d(LOG_TAG, "\t deltaY: " + deltaY);
+                        Log.d(LOG_TAG, "\t stateX: " + stateX);
+                        Log.d(LOG_TAG, "\t stateY: " + stateY);
+                        Log.d(LOG_TAG, "\t stateZ: " + stateZ);
                     }
                 });
             }
@@ -1120,7 +1136,9 @@ public class MainActivity extends Activity {
         mLogConfigStandard.addVariable("pm.vbat", VariableType.FLOAT);
         mLogConfigStandard.addVariable("motion.deltaX", VariableType.INT16_T);
         mLogConfigStandard.addVariable("motion.deltaY", VariableType.INT16_T);
-        mLogConfigStandard.addVariable("range.zrange", VariableType.UINT16_T);
+        mLogConfigStandard.addVariable("kalman.stateX", VariableType.FLOAT);
+        mLogConfigStandard.addVariable("kalman.stateY", VariableType.FLOAT);
+        mLogConfigStandard.addVariable("kalman.stateZ", VariableType.FLOAT);
         mLogg = mCrazyflie.getLogg();
 
         if (mLogg != null) {

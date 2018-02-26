@@ -7,29 +7,31 @@ public class MovementRecorder {
 
     final Logger mLogger = LoggerFactory.getLogger("MovementRecorder");
 
-    private double mXpos = 0, mYpos = 0;     // in meters
-    // base angle 'forward' is considered 0 degrees,
-    private double mCurrentAngle = 0;        // in degrees
+    private double mDroneXpos = 0, mDroneYpos = 0;     // in meters
+    // Drone base angle 'forward' is considered 0 degrees,
+    private double mDroneCurrentAngle = 0;        // in degrees
+
+    private double mUserXpos = 0, mUserYpos = 0;
 
     public MovementRecorder(){
     }
 
-    public void incrementX(double dx){ mXpos += dx; }
+    public void incrementDroneX(double dx){ mDroneXpos += dx*-1*Math.sin(Math.toRadians(mDroneCurrentAngle)); }
 
-    public void incrementY(double dy){ mYpos += dy; }
+    public void incrementDroneY(double dy){ mDroneYpos += dy*Math.cos(Math.toRadians(mDroneCurrentAngle)); }
 
-    public void incrementAngle(double dA) { mCurrentAngle += dA; }
+    public void incrementDroneAngle(double dA) { mDroneCurrentAngle += dA; }
 
-    public void incrementAll(double dx, double dy, double dA) {
-        //incrementX(dx*Math.cos(Math.toRadians(mCurrentAngle)));
-        //incrementY(dy*Math.sin(Math.toRadians(mCurrentAngle)));
-        incrementX(dx);
-        incrementY(dy);
-        incrementAngle(dA);
-        //mLogger.debug(toString());
+    public void setCurrentDroneAngle(double angle) { mDroneCurrentAngle = angle; }
+
+    public void incrementDroneAll(double dx, double dy, double dA) {
+        incrementDroneAngle(dA);
+        incrementDroneX(dx);
+        incrementDroneY(dy);
+        mLogger.debug(toString());
     }
 
     public String toString(){
-        return "xPos: " + mXpos + "; yPos: " + mYpos + "; curAngle(degrees): " + mCurrentAngle;
+        return "xPos: " + mDroneXpos + "; yPos: " + mDroneYpos + "; curAngle(degrees): " + mDroneCurrentAngle;
     }
 }
