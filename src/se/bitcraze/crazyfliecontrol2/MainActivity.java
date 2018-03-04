@@ -102,10 +102,10 @@ public class MainActivity extends Activity {
 
     private boolean mDoubleBackToExitPressedOnce = false;
 
-    private Thread mSendJoystickDataThread;
 
-    private Thread mAutoFlightThread;
-    private boolean mAutoFlightMode = false;
+    // thread for background processes.
+    // such as BLE connection pinging
+    private Thread mBackgroundThread;
 
     private Controls mControls;
 
@@ -254,14 +254,20 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    // resultCode : 0 = user returned from setting src/dest
+    //              1 = drone was detected too far from user so begin backtracking
     protected void onActivityResult(int requestCode, int resultCode, Intent data){
-        if(requestCode == 0){
+        if(requestCode == 0 || requestCode == 1){
             if(resultCode == RESULT_OK){
                 mapResult = data.getStringExtra("result");
 
                 /* testing text box and passing string between activities, remove later */
                 mapResultText.setText(mapResult);
-
+                // resultCode 1 is set for drone to backtrack user. This should be automatic
+                if (resultCode == 1) {
+                    instructCrazyFlie(mapResult);
+                    return;
+                }
                 /* if map result has instructions, reveal GO button */
                 if(mapResult.length() > 1 && mapResult.substring(3,5).equals("->")){
                     goButton.setVisibility(View.VISIBLE);
@@ -273,10 +279,6 @@ public class MainActivity extends Activity {
                             if (mCrazyflie != null) {
                                 if (!mRampToggle) {
                                     Log.d(LOG_TAG, "Ramp - start");
-                                    if (mSendJoystickDataThread != null) {
-                                        mSendJoystickDataThread.interrupt();
-                                        mSendJoystickDataThread = null;
-                                    }
                                     mRampButton.setBackgroundDrawable(getResources().getDrawable(R.drawable.custom_button_connected_ble));
                                     startRampSequence();
                                 } else {
@@ -285,12 +287,12 @@ public class MainActivity extends Activity {
                                     startLandSequence();
                                 }
                                 mRampToggle = !mRampToggle;
+
+                                /* send commands to crazyflie */
+                                instructCrazyFlie(mapResult);
                             } else {
                                 Log.d(LOG_TAG, "Thinks crazyflie is null or not connected");
                             }
-
-                            /* send commands to crazyflie */
-                            instructCrazyFlie(mapResult);
                         }
                     });
                 }
@@ -314,43 +316,48 @@ public class MainActivity extends Activity {
         String[] magDir; /*2 elements, 0=magnitude, 1=direction */
         float turn;
         float newOrientation;
+        float magnitude = .5f;
 
         for(int i=1; i<allCommands.length; i++){
             command = allCommands[i].split(" : ");
             nodes = command[0].split(" -> ");
             magDir = command[1].split(", ");
+            magnitude = Float.parseFloat(magDir[0]);
             newOrientation = Float.parseFloat(magDir[1]);
             turn = newOrientation - orientation;
             //System.out.println(turn);
             if(turn>0 && turn<=180){
-                mPacketControl.turnLeft(turn, 18);
+                mPacketControl.turnLeft(turn, 18,nodes[0]);
                 //System.out.println("Turn left: " + turn);
             }
             else if(turn>180 && turn<360){
-                mPacketControl.turnRight(180.0f-turn, 18);
+                mPacketControl.turnRight(180.0f-turn, 18,nodes[0]);
                 turn = 180.0f-turn;
                 //System.out.println("Turn right: " + turn);
             }
             else{
                 turn *= -1;
                 if(turn>0 && turn<=180){
-                    mPacketControl.turnRight(turn, 18);
+                    mPacketControl.turnRight(turn, 18,nodes[0]);
                     //System.out.println("Turn right: " + turn);
                 }
                 else if(turn>180 && turn<360){
-                    mPacketControl.turnLeft(180.0f-turn, 18);
+                    mPacketControl.turnLeft(180.0f-turn, 18,nodes[0]);
                     turn = 180.0f-turn;
                     //System.out.println("Turn left: " + turn);
                 }
             }
-            orientation = Float.parseFloat(command[1]);
+            orientation = newOrientation;
             if( i == 1 ) {
                 mMovementRecorder.setCurrentDroneAngle(orientation);
             }
             orientation = newOrientation;
 
-            //change to magnitude later
-            mPacketControl.goForward(.5f, .1f);
+            int ratio = 15;
+            // instruct crazyflie to go forward
+            // for now to keep drone for going off, set to magnitude/ratio and set velocity of .1 m/s
+            // 2 input Strings for src Node and dest Node names
+            mPacketControl.goForward(magnitude/ratio, .1f,nodes[0],nodes[1]);
 
         }
 
@@ -447,10 +454,6 @@ public class MainActivity extends Activity {
                 if (mCrazyflie != null) {
                     if (!mRampToggle) {
                         Log.d(LOG_TAG, "Ramp - start");
-                        if (mSendJoystickDataThread != null) {
-                            mSendJoystickDataThread.interrupt();
-                            mSendJoystickDataThread = null;
-                        }
                         mRampButton.setBackgroundDrawable(getResources().getDrawable(R.drawable.custom_button_connected_ble));
                         startRampSequence();
                     } else {
@@ -925,7 +928,9 @@ public class MainActivity extends Activity {
                     //mRingEffectButton.setEnabled(false);
                     //mHeadlightButton.setEnabled(false);
                     mBuzzerSoundButton.setEnabled(false);
+                    mRampButton.setBackgroundDrawable(getResources().getDrawable(R.drawable.custom_button));
                     mRampButton.setEnabled(false);
+                    mRampToggle = false;
                     setBatteryLevel(-1.0f);
                     mPacketControl.setCF(null);
                     mPacketControl.setControl(null);
@@ -987,6 +992,31 @@ public class MainActivity extends Activity {
 
             // connect
             mCrazyflie.connect(new ConnectionData(radioChannel, radioDatarate));
+            /* // For background processes. currently unused
+            mBleChecker = new BleChecker();
+            mBackgroundThread = new Thread(){
+                @Override
+                public void run(){
+                    try{
+                        if(mBleChecker.droneOutofRange()){
+                            mPacketControl.setBacktrack(true);
+                            // wait for drone packet sender thread to reset drone queue before adding new commands
+                            while(mPacketControl.getBacktrack()){
+                                continue;
+                            }
+                            //  auto send info to graphing activity
+                            //  used info:
+                            //      drone src node, drone dest node, dist traveled, dist to travel
+                            //      user position?
+                            //      result activity command value
+                        }
+                        Thread.sleep(5000);
+                    } catch (Exception e){
+                        Log.d(LOG_TAG,"Background thread interuppted");
+                    }
+                }
+            };
+            */
 
 //            mCrazyflie.addDataListener(new DataListener(CrtpPort.CONSOLE) {
 //
@@ -1002,13 +1032,11 @@ public class MainActivity extends Activity {
     }
 
     private void startRampSequence() {
-        mAutoFlightMode = true;
         mPacketControl.liftOff();
     };
 
     private void startLandSequence() {
         mPacketControl.land();
-        mAutoFlightMode = false;
     };
 
     // extra method for onClick attribute in XML
@@ -1067,10 +1095,6 @@ public class MainActivity extends Activity {
         if (mCrazyflie != null) {
             mCrazyflie.disconnect();
             mCrazyflie = null;
-        }
-        if (mSendJoystickDataThread != null) {
-            mSendJoystickDataThread.interrupt();
-            mSendJoystickDataThread = null;
         }
 
         if (mDriver != null) {

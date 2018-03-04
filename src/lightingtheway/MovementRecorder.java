@@ -10,25 +10,47 @@ public class MovementRecorder {
     private double mDroneXpos = 0, mDroneYpos = 0;     // in meters
     // Drone base angle 'forward' is considered 0 degrees,
     private double mDroneCurrentAngle = 0;        // in degrees
+    private String mDroneCurSrc = "", mDroneCurDest = "";
+    private float mPathDistTraveled = 0, mPathDistToTravel = 0;
 
     private double mUserXpos = 0, mUserYpos = 0;
 
     public MovementRecorder(){
     }
 
-    public void incrementDroneX(double dx){ mDroneXpos += dx*-1*Math.sin(Math.toRadians(mDroneCurrentAngle)); }
+    private double incrementDroneX(double dx){
+        double dx_inc = dx*Math.cos(Math.toRadians(mDroneCurrentAngle));
+        double dy_inc = dx*Math.sin(Math.toRadians(mDroneCurrentAngle));
+        mDroneXpos += dx_inc;
+        mDroneYpos += dy_inc;
+        mPathDistTraveled += Math.sqrt(dx_inc*dx_inc + dy_inc*dy_inc);
+        return 0;
+    }
 
-    public void incrementDroneY(double dy){ mDroneYpos += dy*Math.cos(Math.toRadians(mDroneCurrentAngle)); }
+    private double incrementDroneY(double dy){
+        double inc = dy*Math.sin(Math.toRadians(mDroneCurrentAngle));
+        mDroneYpos += inc;
+        return inc;
+    }
 
-    public void incrementDroneAngle(double dA) { mDroneCurrentAngle += dA; }
+    private void incrementDroneAngle(double dA) { mDroneCurrentAngle += dA; }
 
     public void setCurrentDroneAngle(double angle) { mDroneCurrentAngle = angle; }
 
+    public void setDroneCurrentSrcDest(String src,String dest, float dist) {
+        mDroneCurSrc = src;
+        mDroneCurDest = dest;
+        mPathDistToTravel = dist;
+        mPathDistTraveled = 0;
+    }
+
     public void incrementDroneAll(double dx, double dy, double dA) {
         incrementDroneAngle(dA);
+        // currently we only use goForward, as such only dx is relevant
         incrementDroneX(dx);
-        incrementDroneY(dy);
-        mLogger.debug(toString());
+        //double deltaY = incrementDroneY(dy);
+
+        //mLogger.debug(toString());
     }
 
     public String toString(){
