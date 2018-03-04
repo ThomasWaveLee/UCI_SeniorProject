@@ -27,6 +27,7 @@
 
 package se.bitcraze.crazyflie.lib;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -53,14 +54,18 @@ import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Handler;
+import android.os.Vibrator;
+import android.widget.Toast;
+
 import se.bitcraze.crazyflie.lib.crazyradio.ConnectionData;
 import se.bitcraze.crazyflie.lib.crtp.CrtpDriver;
 import se.bitcraze.crazyflie.lib.crtp.CrtpPacket;
+import se.bitcraze.crazyfliecontrol2.MainActivity;
 
 @SuppressLint("NewApi")
 public class BleLink extends CrtpDriver {
 
-    final Logger mLogger = LoggerFactory.getLogger("BLELink");
+	final Logger mLogger = LoggerFactory.getLogger("BLELink");
 
 	// Set to -40 to connect only to close-by Crazyflie
 	private static final int rssiThreshold = -100;
@@ -82,15 +87,30 @@ public class BleLink extends CrtpDriver {
 	private static final String CF_LOADER_DEVICE_NAME = "Crazyflie Loader";
 
 	private static UUID CF_SERVICE = UUID.fromString("00000201-1C7F-4F9E-947B-43B7C00A9A08");
-    private static UUID CRTP = UUID.fromString("00000202-1C7F-4F9E-947B-43B7C00A9A08");
-    private static UUID CRTPUP = UUID.fromString("00000203-1C7F-4F9E-947B-43B7C00A9A08");
-    private static UUID CRTPDOWN = UUID.fromString("00000204-1C7F-4F9E-947B-43B7C00A9A08");
+	private static UUID CRTP = UUID.fromString("00000202-1C7F-4F9E-947B-43B7C00A9A08");
+	private static UUID CRTPUP = UUID.fromString("00000203-1C7F-4F9E-947B-43B7C00A9A08");
+	private static UUID CRTPDOWN = UUID.fromString("00000204-1C7F-4F9E-947B-43B7C00A9A08");
 
 	private final static int REQUEST_ENABLE_BT = 1;
 	protected boolean mWritten = true;
 	private Activity mContext;
 	private boolean mWriteWithAnswer;
 	protected boolean mConnected;
+	private boolean RSSI_status;
+	private boolean connected_once = false;
+	private double RSSI_Value_Center = 0;
+	private int RSSI_Value_Num = 0;
+	private double RSSI_range = 0;
+	private ArrayList<Integer> RSSI_field;
+	private double Global_RSSI_Center = 0;
+	private int Global_RSSI_Value_Num = 0;
+	private ArrayList<Double> Global_RSSI_range_field;
+	private double Global_RSSI_range = 0;
+	private ArrayList<Integer> Global_RSSI_field;
+	private int iteration_number = 0;
+	private int checks = 0;
+	private Timer readRssiTask;
+	private double safe_RSSI_threshold = 0;
 
 	protected enum State {IDLE, CONNECTING, CONNECTED};
 	protected State state = State.IDLE;
@@ -99,34 +119,238 @@ public class BleLink extends CrtpDriver {
 		mContext = ctx;
 		mWriteWithAnswer = writeWithAnswer;
 		mInQueue = new LinkedBlockingQueue<byte[]>();
+		RSSI_field = new ArrayList<>();
+		Global_RSSI_field = new ArrayList<>();
+		Global_RSSI_range_field = new ArrayList<>();
 	}
 
 	private BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
 
-        @Override
-        public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
-            super.onConnectionStateChange(gatt, status, newState);
-            if (newState == BluetoothProfile.STATE_CONNECTED) {
-                mLogger.debug("onConnectionStateChange: STATE_CONNECTED");
-                gatt.discoverServices();
-                mGatt = gatt;
-            } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                mLogger.debug("onConnectionStateChange: STATE_DISCONNECTED");
-                // This is necessary to handle a disconnect on the copter side
-                mBluetoothAdapter.stopLeScan(mLeScanCallback);
-                mConnected = false;
-                state = State.IDLE;
-                // it should actually be notifyConnectionLost, but there is
-                // no difference between a deliberate disconnect and a lost connection
-                notifyDisconnected();
-            } else {
-                mLogger.debug("onConnectionStateChange: else: " + newState);
-                mBluetoothAdapter.stopLeScan(mLeScanCallback);
-                mConnected = false;
-                state = State.IDLE;
-                notifyConnectionLost("BLE connection lost");
-            }
-        }
+		@Override
+		public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
+			super.onConnectionStateChange(gatt, status, newState);
+			final int status_check = newState;
+			if (newState == BluetoothProfile.STATE_CONNECTED) {
+				connected_once = true;
+				mLogger.debug("onConnectionStateChange: STATE_CONNECTED");
+				gatt.discoverServices();
+				mGatt = gatt;
+				if(readRssiTask != null) {
+					readRssiTask.cancel();
+					readRssiTask = null;
+				}
+				readRssiTask = new Timer();
+				TimerTask thread_timer = new TimerTask(){
+					public void run(){
+						RSSI_status = mGatt.readRemoteRssi();
+						/*if ((status_check == BluetoothProfile.STATE_DISCONNECTED)){
+							readRssiTask.cancel();
+						}*/
+						/*if((RSSI_status != true)&&(connected_once)){
+							//If the Array is more than 40, we can trust that a new add of the RSSI temporary storage will provide data.
+							if(RSSI_Value_Num > 15) {
+								Global_RSSI_field.add((int)RSSI_Value_Center);
+								Global_RSSI_range_field.add(RSSI_range);
+								Global_RSSI_Value_Num++;
+								double Global_RSSI_newCenter = 0;
+								for (int k = 0; k < Global_RSSI_Value_Num; k++) {
+									Global_RSSI_newCenter += Global_RSSI_field.get(k);
+								}
+								Global_RSSI_Center = Global_RSSI_newCenter / Global_RSSI_Value_Num;
+								double Global_new_RSSI_values = 0;
+								for (int j = 0; j < Global_RSSI_Value_Num; j++){
+									Global_new_RSSI_values += Global_RSSI_range_field.get(j);
+								}
+								Global_RSSI_range = Global_new_RSSI_values / RSSI_Value_Num;
+							}
+							//Clears the value of the RSSI Temporary Storage to make sure that new reads will be clean
+							RSSI_Value_Center = 0;
+							RSSI_Value_Num = 0;
+							RSSI_range = 0;
+							RSSI_field = null;
+							RSSI_field = new ArrayList<>();
+						}*/
+					}
+				};
+				readRssiTask.schedule(thread_timer, 2000, 1000);
+				//Creating a method to invoke a RSSI call to the onReadRemoteRSSI value;
+
+			} else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+				mLogger.debug("onConnectionStateChange: STATE_DISCONNECTED");
+				// This is necessary to handle a disconnect on the copter side
+				mBluetoothAdapter.stopLeScan(mLeScanCallback);
+				mConnected = false;
+				state = State.IDLE;
+				// it should actually be notifyConnectionLost, but there is
+				// no difference between a deliberate disconnect and a lost connection
+				notifyDisconnected();
+			} else {
+				mLogger.debug("onConnectionStateChange: else: " + newState);
+				mBluetoothAdapter.stopLeScan(mLeScanCallback);
+				mConnected = false;
+				state = State.IDLE;
+				notifyConnectionLost("BLE connection lost");
+				//Converts Global RSSI to local RSSI if the connection is broken as a new RSSI threshold and state will be chosen
+				//Helps Normalized the value by using the RSSI value of subsequent data
+				if (connected_once) {
+					RSSI_Value_Center = Global_RSSI_Center;
+					RSSI_Value_Num = 1;
+					RSSI_range = Global_RSSI_range;
+					RSSI_field = null;
+					RSSI_field = new ArrayList<>();
+					RSSI_field.add((int)Global_RSSI_Center);
+					Global_RSSI_Center = 0;
+					Global_RSSI_Value_Num = 0;
+					Global_RSSI_range = 0;
+					Global_RSSI_field = null;
+					Global_RSSI_field = new ArrayList<>();
+					Global_RSSI_range_field = null;
+					Global_RSSI_range_field = new ArrayList<>();
+					connected_once = false;
+					Toast.makeText(mContext , "Bluetooth Connection Lost, Please move faster", Toast.LENGTH_SHORT).show();
+				}
+				else if((Global_RSSI_range == 0) && (RSSI_range ==0)){
+					Toast.makeText(mContext , "Bluetooth Connection Unreliable.", Toast.LENGTH_SHORT).show();
+				}
+			}
+		}
+		@Override
+		public void onReadRemoteRssi(BluetoothGatt gatt, int rssi, int status){
+			iteration_number++;
+			if (iteration_number < 40){
+				safe_RSSI_threshold += rssi;
+			}
+			else if(iteration_number == 40){
+				safe_RSSI_threshold = (safe_RSSI_threshold + 10)/40;
+			}
+			else {
+				super.onReadRemoteRssi(gatt, rssi, status);
+				RSSI_field.add(rssi);
+				RSSI_Value_Num++;
+				double RSSI_new_center = 0;
+				if (RSSI_Value_Num > 15) {
+					double threshold_upper = 0;
+					double threshold_lower = 0;
+					if (RSSI_range > 0) {
+						threshold_upper = RSSI_Value_Center - 0.5 * RSSI_range;
+						threshold_lower = RSSI_Value_Center + 0.5 * RSSI_range;
+					} else {
+						threshold_lower = RSSI_Value_Center - 0.5 * RSSI_range;
+						threshold_upper = RSSI_range + 0.5 * RSSI_Value_Center;
+					}
+					if ((rssi < threshold_lower)) {
+						//Checks for the lower bound in which the user will move away from the drone
+						checks++;
+						/*mContext.runOnUiThread(new Runnable() {
+							@Override
+							public void run() {
+								Toast.makeText(mContext, "Bluetooth Connection Weak1, Please move faster", Toast.LENGTH_SHORT).show();
+							}
+						});*/
+					} else if ((rssi > threshold_upper) && (RSSI_Value_Num > 10)) {
+						Global_RSSI_field.add((int) RSSI_Value_Center);
+						Global_RSSI_range_field.add(RSSI_range);
+						Global_RSSI_Value_Num++;
+						double Global_RSSI_newCenter = 0;
+						for (int k = 0; k < Global_RSSI_Value_Num; k++) {
+							Global_RSSI_newCenter += Global_RSSI_field.get(k);
+						}
+						Global_RSSI_Center = Global_RSSI_newCenter / Global_RSSI_Value_Num;
+						double Global_new_RSSI_values = 0;
+						for (int j = 0; j < Global_RSSI_Value_Num; j++) {
+							Global_new_RSSI_values += Global_RSSI_range_field.get(j);
+						}
+						Global_RSSI_range = Global_new_RSSI_values / RSSI_Value_Num;
+						RSSI_Value_Center = 0;
+						RSSI_Value_Num = 0;
+						RSSI_range = 0;
+						RSSI_field = null;
+						RSSI_field = new ArrayList<>();
+						checks--;
+					} else {
+						checks--;
+					}
+				}
+				if (RSSI_Value_Num > 0) {
+					for (int i = 0; i < RSSI_Value_Num; i++) {
+						RSSI_new_center += RSSI_field.get(i);
+					}
+					RSSI_Value_Center = RSSI_new_center / RSSI_Value_Num;
+					for (int j = 0; j < RSSI_Value_Num; j++) {
+						RSSI_range += Math.abs((RSSI_Value_Center - RSSI_field.get(j)) * (RSSI_Value_Center - RSSI_field.get(j)));
+					}
+					RSSI_range = Math.sqrt(RSSI_range) / RSSI_Value_Num;
+				}
+				if (RSSI_Value_Num > 20) {
+					Global_RSSI_field.add((int) RSSI_Value_Center);
+					Global_RSSI_range_field.add(RSSI_range);
+					Global_RSSI_Value_Num++;
+					double Global_RSSI_newCenter = 0;
+					for (int k = 0; k < Global_RSSI_Value_Num; k++) {
+						Global_RSSI_newCenter += Global_RSSI_field.get(k);
+					}
+					Global_RSSI_Center = Global_RSSI_newCenter / Global_RSSI_Value_Num;
+					double Global_new_RSSI_values = 0;
+					for (int j = 0; j < Global_RSSI_Value_Num; j++) {
+						Global_new_RSSI_values += Global_RSSI_range_field.get(j);
+					}
+					Global_RSSI_range = Global_new_RSSI_values / RSSI_Value_Num;
+					RSSI_Value_Center = 0;
+					RSSI_Value_Num = 0;
+					RSSI_range = 0;
+					RSSI_field = null;
+					RSSI_field = new ArrayList<>();
+				}
+
+			/*else{
+				mContext.runOnUiThread(new Runnable() {
+					@Override
+					public void run() {
+						Toast.makeText(mContext , "Bluetooth Connection Lost, Please move faster", Toast.LENGTH_SHORT).show();
+					}
+				});
+
+			}*/
+				if ((iteration_number % 2 == 0)&&(iteration_number > 40)) {
+					if ((checks > 2) && (Global_RSSI_Value_Num == 0)) {
+						mContext.runOnUiThread(new Runnable() {
+							@Override
+							public void run() {
+								Toast.makeText(mContext, "Bluetooth Connection Weak2, Please move faster", Toast.LENGTH_SHORT).show();
+							}
+						});
+						checks = 0;
+					} else if (Global_RSSI_Value_Num > 2) {
+						double temp_range = Math.abs(Global_RSSI_range);
+						if (temp_range > 30) {
+							temp_range = 20;
+						}
+						double global_thres_lower = Global_RSSI_Center - temp_range;
+						if (rssi < global_thres_lower) {
+							mContext.runOnUiThread(new Runnable() {
+								@Override
+								public void run() {
+									Toast.makeText(mContext, "Bluetooth Connection Weak, Please move faster", Toast.LENGTH_SHORT).show();
+								}
+							});
+						}
+					}
+					if(((safe_RSSI_threshold - 30) > RSSI_Value_Center)&&(RSSI_Value_Num > 5)){
+						mContext.runOnUiThread(new Runnable() {
+							@Override
+							public void run() {
+								Toast.makeText(mContext, "Bluetooth Connection Weak, Please move faster", Toast.LENGTH_SHORT).show();
+								tooFar = true;
+							}
+						});
+					}
+					else{
+						tooFar = false;
+					}
+
+				}
+			}
+		}
 
 		@Override
 		public void onServicesDiscovered(BluetoothGatt gatt, int status) {
@@ -180,7 +404,7 @@ public class BleLink extends CrtpDriver {
 		}
 
 		@Override
-        public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
+		public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
 			super.onCharacteristicRead(gatt, characteristic, status);
 			/*
 			mLogger.debug("On read call for characteristic: " + characteristic.getUuid().toString());
@@ -190,7 +414,7 @@ public class BleLink extends CrtpDriver {
 				mLogger.debug(Integer.toHexString(i));
 			}
 			*/
-        }
+		}
 
 		@Override
 		public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
@@ -202,7 +426,7 @@ public class BleLink extends CrtpDriver {
 					mInQueue.put(data);
 				}
 			} catch(InterruptedException e) {
-					mLogger.error("InterruptedException: " + e.getMessage());
+				mLogger.error("InterruptedException: " + e.getMessage());
 				return;
 			}
 			/* // Debug Print for whats being received
@@ -221,7 +445,7 @@ public class BleLink extends CrtpDriver {
 		@Override
 		public void onLeScan(BluetoothDevice device, int rssi, byte[] anounce) {
 			if (device != null && device.getName() != null) {
-			    mLogger.debug("Scanned device \"" + device.getName() + "\" RSSI: " + rssi);
+				mLogger.debug("Scanned device \"" + device.getName() + "\" RSSI: " + rssi);
 
 				if (device.getName().equals(CF_DEVICE_NAME) && rssi>rssiThreshold) {
 					mBluetoothAdapter.stopLeScan(this);
@@ -233,7 +457,7 @@ public class BleLink extends CrtpDriver {
 					mDevice = device;
 					mContext.runOnUiThread(new Runnable() {
 						@Override
-                        public void run() {
+						public void run() {
 							mDevice.connectGatt(mContext, false, mGattCallback);
 						}
 					});
@@ -244,8 +468,8 @@ public class BleLink extends CrtpDriver {
 
 	@Override
 	public void connect(ConnectionData connectionData) {
-	    this.mConnectionData = connectionData;
-	    // TODO: connectionData is unused until BLE can address specific quadcopter
+		this.mConnectionData = connectionData;
+		// TODO: connectionData is unused until BLE can address specific quadcopter
 		if (state != State.IDLE) {
 			throw new IllegalArgumentException("Connection already started");
 		}
@@ -254,9 +478,9 @@ public class BleLink extends CrtpDriver {
 		mBluetoothAdapter = bluetoothManager.getAdapter();
 
 		if (mBluetoothAdapter == null || !mBluetoothAdapter.isEnabled()) {
-		    Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-		    mContext.startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
-		    throw new IllegalArgumentException("Bluetooth needs to be started");
+			Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+			mContext.startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+			throw new IllegalArgumentException("Bluetooth needs to be started");
 		}
 
 		mBluetoothAdapter.stopLeScan(mLeScanCallback);
@@ -278,32 +502,32 @@ public class BleLink extends CrtpDriver {
 		notifyConnectionRequested();
 	}
 
-    @Override
-    public void disconnect() {
-        mContext.runOnUiThread(new Runnable() {
-            public void run() {
-                if(mConnected) {
-                    mGatt.disconnect();
-                    //delay close command to fix potential NPE
-                    new Handler().postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            mGatt.close();
-                            mGatt = null;
-                        }
-                    }, 100);
-                    mConnected = false;
-                    mBluetoothAdapter.stopLeScan(mLeScanCallback);
-                    if (mScannTimer != null) {
-                        mScannTimer.cancel();
-                        mScannTimer = null;
-                    }
-                    state = State.IDLE;
-                    notifyDisconnected();
-                }
-            }
-        });
-    }
+	@Override
+	public void disconnect() {
+		mContext.runOnUiThread(new Runnable() {
+			public void run() {
+				if(mConnected) {
+					mGatt.disconnect();
+					//delay close command to fix potential NPE
+					new Handler().postDelayed(new Runnable() {
+						@Override
+						public void run() {
+							mGatt.close();
+							mGatt = null;
+						}
+					}, 100);
+					mConnected = false;
+					mBluetoothAdapter.stopLeScan(mLeScanCallback);
+					if (mScannTimer != null) {
+						mScannTimer.cancel();
+						mScannTimer = null;
+					}
+					state = State.IDLE;
+					notifyDisconnected();
+				}
+			}
+		});
+	}
 
 	@Override
 	public boolean isConnected() {
@@ -322,9 +546,9 @@ public class BleLink extends CrtpDriver {
 		class SendBlePacket implements Runnable {
 			CrtpPacket pk;
 
-            public SendBlePacket(CrtpPacket pk) {
-                this.pk = pk;
-            }
+			public SendBlePacket(CrtpPacket pk) {
+				this.pk = pk;
+			}
 
 			public void run() {
 				if(mConnected && mWritten) {
@@ -335,8 +559,8 @@ public class BleLink extends CrtpDriver {
 						mCrtpChar.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE);
 						mWritten = true;
 					}
-                    mCrtpChar.setValue(pk.toByteArray());
-					 // Debug prints to see whats being sent
+					mCrtpChar.setValue(pk.toByteArray());
+					// Debug prints to see whats being sent
 					/*
 					String pkt = "";
 					for(byte i: pk.toByteArray()){
@@ -346,20 +570,20 @@ public class BleLink extends CrtpDriver {
 					*/
 					mGatt.writeCharacteristic(mCrtpChar);
 				}
-	        }
+			}
 		}
 		mContext.runOnUiThread(new SendBlePacket(packet));
 	}
 
-    @Override
-    public CrtpPacket receivePacket(int wait) {
+	@Override
+	public CrtpPacket receivePacket(int wait) {
 		try {
 			if(isConnected()){
 				// grab 1st packet
 				byte[] pkt = mInQueue.poll((long) wait, TimeUnit.SECONDS);
 				if (pkt == null) {
-                    return null;
-                }
+					return null;
+				}
 				byte BLEheader = pkt[0];
 				int headerValue = Byte.valueOf(BLEheader).intValue();
 				// DECODING
@@ -383,11 +607,11 @@ public class BleLink extends CrtpDriver {
 				}
 				if (length > 19){
 					// 2nd packet
-                    byte[] pkt2;
+					byte[] pkt2;
 					pkt2 = mInQueue.poll((long) wait, TimeUnit.SECONDS);
 					if(pkt2 == null){
-					    return null;
-                    }
+						return null;
+					}
 					byte BLEheader2 = pkt2[0];
 					int headerValue2 = Byte.valueOf(BLEheader2).intValue();
 					int pid2 = headerValue2 >> 5;
@@ -405,22 +629,22 @@ public class BleLink extends CrtpDriver {
 		} catch (InterruptedException e) {
 			mLogger.error("InterruptedException: " + e.getMessage());
 		}
-        return null;
-    }
+		return null;
+	}
 
-    @Override
-    public boolean scanSelected(ConnectionData connectionData, byte[] packet) {
-        // TODO Auto-generated method stub
-        return false;
-    }
+	@Override
+	public boolean scanSelected(ConnectionData connectionData, byte[] packet) {
+		// TODO Auto-generated method stub
+		return false;
+	}
 
-    @Override
-    public void startSendReceiveThread() {
-        // TODO Auto-generated method stub
-    }
+	@Override
+	public void startSendReceiveThread() {
+		// TODO Auto-generated method stub
+	}
 
-    @Override
-    public void stopSendReceiveThread() {
-        // TODO Auto-generated method stub
-    }
+	@Override
+	public void stopSendReceiveThread() {
+		// TODO Auto-generated method stub
+	}
 }

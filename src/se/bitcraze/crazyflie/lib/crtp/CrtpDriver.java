@@ -44,6 +44,7 @@ public abstract class CrtpDriver {
     protected Set<ConnectionListener> mConnectionListeners = new CopyOnWriteArraySet<ConnectionListener>();
 
     protected ConnectionData mConnectionData;
+    protected boolean tooFar = false;
 
     /**
      * Driver constructor. Throw an exception if the driver is unable to open the URI
@@ -171,4 +172,8 @@ public abstract class CrtpDriver {
     public abstract void startSendReceiveThread();
 
     public abstract void stopSendReceiveThread();
+
+    public void setTooFar(boolean bool) { tooFar = bool; }
+
+    public boolean isTooFar() { return tooFar; }
 }
