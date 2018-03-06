@@ -1,4 +1,4 @@
-package se.bitcraze.crazyfliecontrol2;
+package lightingtheway;
 
 
 import android.graphics.Point;
@@ -15,20 +15,22 @@ public class Graph {
     private Vector<Node> nodeTable;
     private int numOfNodes;
 
-    Graph(){
-        numOfNodes = 5;
+    public Graph(){
+        numOfNodes = 5+2;
     }
-    int getNumOfNodes(){
+
+    public int getNumOfNodes(){
         return numOfNodes;
     }
-    Vector<Node> getAllNodes(){
+
+    public Vector<Node> getAllNodes(){
         return nodeTable;
     }
     /*
     In the future, this function can take an input floor plan
     and create a graph
     */
-    Graph init(){
+    public Graph init(){
         /*Test map:
 
          .....................................[E]...................
@@ -40,28 +42,30 @@ public class Graph {
          */
         nodeTable = new Vector<Node>();
         /*Hard code the nodes*/
-        nodeTable.addElement(new Node(0, "A", 0, 0));
-        nodeTable.addElement(new Node(1, "B", 0, 5));
-        nodeTable.addElement(new Node(2, "C", -5, 5));
-        nodeTable.addElement(new Node(3, "D", 7, 5));
-        nodeTable.addElement(new Node(4, "E", 7,10));
+        nodeTable.addElement(new Node(0, "Drone", 0, 0));
+        nodeTable.addElement(new Node(1, "User", 0, 0));
+        nodeTable.addElement(new Node(2, "A", 0, 0));
+        nodeTable.addElement(new Node(3, "B", 0, 5));
+        nodeTable.addElement(new Node(4, "C", -5, 5));
+        nodeTable.addElement(new Node(5, "D", 7, 5));
+        nodeTable.addElement(new Node(6, "E", 7,10));
 
         /*Hard code the edges*/
-        addEdge(nodeTable.elementAt(0), nodeTable.elementAt(1), 5, 90);
-        addEdge(nodeTable.elementAt(1), nodeTable.elementAt(2), 5, 180);
-        addEdge(nodeTable.elementAt(1), nodeTable.elementAt(3), 7, 0);
-        addEdge(nodeTable.elementAt(3), nodeTable.elementAt(4), 5, 90);
+        addEdge(nodeTable.elementAt(2), nodeTable.elementAt(3), 5, 90);
+        addEdge(nodeTable.elementAt(3), nodeTable.elementAt(4), 5, 180);
+        addEdge(nodeTable.elementAt(3), nodeTable.elementAt(5), 7, 0);
+        addEdge(nodeTable.elementAt(5), nodeTable.elementAt(6), 5, 90);
 
         return this;
     }
 
-    class Node implements Comparable<Node>{
+    public class Node implements Comparable<Node>{
         int ID;
-        String name;
+        public String name;
         boolean isDrawn;
 
         /*These are node coordinates. Used for drawing on canvas*/
-        Point coordinate;
+        public Point coordinate;
 
         /*This points to the parent after calculating Dijkstra*/
         Node parent;
@@ -76,8 +80,8 @@ public class Graph {
         by Dijkstra*/
         double minDistance;
 
-        LinkedList<Node> adjList;
-        ArrayList<Edge> edgeList;
+        public LinkedList<Node> adjList;
+        public ArrayList<Edge> edgeList;
 
         Node(int ID, String n, int x, int y){
             this.ID = ID;
@@ -94,7 +98,7 @@ public class Graph {
         }
     }
 
-    class Edge{
+    public class Edge{
         /*DISTANCE
         Unit distance between nodes
         */
@@ -111,7 +115,7 @@ public class Graph {
         */
         double direction;
 
-        Node target;
+        public Node target;
 
         Edge(double dist, double direction, Node dest){
             this.distance = dist;
@@ -128,6 +132,48 @@ public class Graph {
         dest.edgeList.add(new Edge(dist, (direction+180)%360, src));
     }
 
+    private void removeEdge(Node src, Node dest)
+    {
+        src.edgeList.remove(dest);
+        dest.edgeList.remove(src);
+    }
+
+    /* methods for connecting and disconeecting User and Drone nodes into graph */
+    public void connectDrone(String dest, double dist, double direction){
+        addEdge(getNode("Drone"),getNode(dest),dist,direction);
+    }
+
+    public void disconnectDrone(String dest, double dist, double direction) {
+        removeEdge(getNode("Drone"), getNode(dest));
+    }
+
+    public void clearDrone(){
+        Node drone = getNode("Drone");
+        drone.edgeList.clear();
+        drone.adjList.clear();
+        for (Node n: nodeTable){
+            n.adjList.remove(drone);
+        }
+    }
+
+    public void connectUser(String dest, double dist, double direction){
+        addEdge(getNode("User"),getNode(dest),dist,direction);
+    }
+
+    public void disconnectUser(String dest, double dist, double direction) {
+        removeEdge(getNode("User"), getNode(dest));
+    }
+
+    public void clearUser(){
+        Node user = getNode("User");
+        user.edgeList.clear();
+        user.adjList.clear();
+        for (Node n: nodeTable){
+            n.adjList.remove(user);
+        }
+
+    }
+
     private boolean validNodeID(int id){
         return id >= 0 && id < numOfNodes;
     }
@@ -142,15 +188,15 @@ public class Graph {
         }
     }
 
-    String getDirections(int srcNodeID, int destNodeID){
+    public String getDirections(int srcNodeID, int destNodeID){
         return getDirections(getNode(srcNodeID), getNode(destNodeID));
     }
 
-    String getDirections(String srcNodeName, String destNodeName){
+    public String getDirections(String srcNodeName, String destNodeName){
         return getDirections(getNode(srcNodeName), getNode(destNodeName));
     }
 
-    String getDirections(Node src, Node dest){
+    public String getDirections(Node src, Node dest){
         /*Execute dijkstra*/
         try{
             dijkstra(src);

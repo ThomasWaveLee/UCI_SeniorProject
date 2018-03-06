@@ -9,6 +9,8 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import lightingtheway.Graph;
+
 public class MappingActivity extends Activity{
 
     private Button mainButton;
@@ -46,7 +48,7 @@ public class MappingActivity extends Activity{
 
                 /*Compute direction vectors*/
                 try {
-                    result = graph.getDirections(Integer.parseInt(inputs[0]), Integer.parseInt(inputs[1]));
+                    result = graph.getDirections(inputs[0], inputs[1]);
                 }
                 catch(Exception e){ result = e.getMessage();
                 }

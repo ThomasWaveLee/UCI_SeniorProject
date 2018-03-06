@@ -8,14 +8,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.lang.Runnable;
 
 import se.bitcraze.crazyflie.lib.crazyflie.Crazyflie;
-import se.bitcraze.crazyflie.lib.crtp.CommanderPacket;
-import se.bitcraze.crazyflie.lib.crtp.CrtpPacket;
 import se.bitcraze.crazyflie.lib.crtp.HoverPacket;
 import se.bitcraze.crazyfliecontrol.controller.Controls;
 
@@ -25,14 +22,14 @@ public class PacketControl implements Serializable{
     final Logger mLogger = LoggerFactory.getLogger("PacketControl");
 
     private enum STATE {
-        GROUNDED, LIFTOFF, CALIBRATING, FLYING, LANDING
+        GROUNDED, LIFTOFF, CALIBRATING, FLYING, LANDING, BACKTRACKING
     }
 
     public STATE mState = STATE.GROUNDED;
 
     public final static int absMaxThrust = 65535;
     // period in ms at which to send packet to crazyflie
-    public final static int gCommandRate = 50;
+    public final static int gCommandRate = 200;
     // base height to hover at
     public final static float gBaseHeight = 0.1f;
 
@@ -56,7 +53,12 @@ public class PacketControl implements Serializable{
 
     private Queue<CfCommand> mQueue = new LinkedBlockingQueue<>(20);
 
-    private MovementRecorder mMovementRecorder = new MovementRecorder();
+    private MovementRecorder mMovementRecorder;
+
+    // Set to true when user detected out of range.
+    private boolean mBacktrackUser = false;
+
+    private CfCommand mCurrentCommand = new CfCommand();
 
     // Thread to run when set to auto flight
     private Thread mPacketSender;
@@ -114,8 +116,15 @@ public class PacketControl implements Serializable{
         private float mTime;
         private float mVx = 0, mVy = 0, mYawrate = 0;
         public float mRemainingTime;
+        public float mDistTraveled = 0;
+        public float mDistToTravel = 0;
+
         // used for priority queue to allow overrides
         public int mPriority;
+
+        // String to hold names of Src and dest nodes
+        public String src = "", dest = "";
+
         public HoverPacket mHoverPacket;
 
         public CfCommand(){}
@@ -124,6 +133,7 @@ public class PacketControl implements Serializable{
             mPriority = gMovePriority;
             mTime = time;
             mRemainingTime = mTime;
+            mDistToTravel = time*velocity/1000;
 
             switch(dir) {
                 //  NOTE: The crazyflie sees "forward" as +x and "right" as +y
@@ -162,6 +172,12 @@ public class PacketControl implements Serializable{
             mPriority = priority;
         }
 
+        public CfCommand(Direction dir,float time, float velocity, float yawRate,String src, String dest){
+            this(dir,time,velocity,yawRate);
+            this.src = src;
+            this.dest = dest;
+        }
+
         public int compareTo(Object o){
             if (o instanceof CfCommand){
                 int p = ((CfCommand)o).mPriority;
@@ -187,6 +203,7 @@ public class PacketControl implements Serializable{
 
 
     // methods that input commands into queue to be sent to crazyflie
+
     public boolean goRight(float time){
         return addCommand(new CfCommand(Direction.RIGHT,time,mVy,0));
     }
@@ -214,6 +231,11 @@ public class PacketControl implements Serializable{
         return addCommand(new CfCommand(Direction.FORWARD,time,vx,0));
     }
 
+    public boolean goForward(float dist, float vx, String src, String dest){
+        float time = toMS(dist/vx);
+        return addCommand(new CfCommand(Direction.FORWARD,time,vx,0,src,dest));
+    }
+
     public boolean goBack(float time){
         return addCommand(new CfCommand(Direction.BACK,time,mVx,0));
     }
@@ -232,6 +254,11 @@ public class PacketControl implements Serializable{
         return addCommand(new CfCommand(Direction.TURN_LEFT,time,0,yawrate));
     }
 
+    public boolean turnLeft(float angle, float yawrate, String src){
+        float time = toMS(angle/yawrate);
+        return addCommand(new CfCommand(Direction.TURN_LEFT,time,0,yawrate,src,src));
+    }
+
     public boolean turnRight(float time){
         return addCommand(new CfCommand(Direction.TURN_RIGHT,time,0,mYawRate));
     }
@@ -239,6 +266,11 @@ public class PacketControl implements Serializable{
     public boolean turnRight(float angle, float yawrate){
         float time = toMS(angle/yawrate);
         return addCommand(new CfCommand(Direction.TURN_RIGHT,time,0,yawrate));
+    }
+
+    public boolean turnRight(float angle, float yawrate, String src){
+        float time = toMS(angle/yawrate);
+        return addCommand(new CfCommand(Direction.TURN_RIGHT,time,0,yawrate,src,src));
     }
     // end of methods to send commands to crazyflie
 
@@ -254,55 +286,72 @@ public class PacketControl implements Serializable{
         return mQueue.poll();
     }
 
+    // Creates and returns a new packetSenderThread.
+    Thread createPacketSenderThread() {
+        return new Thread(new Runnable() {
+            @Override
+            public void run() {
+                // init for compiler
+                float timeLeft = -1;
+                while (mCrazyFlie != null) {
+                    // If not grounded then look at queue
+                    if (mState != STATE.GROUNDED) {
+                        if(mBacktrackUser) {
+                            timeLeft = -1;
+                            mQueue.clear();
+                            mBacktrackUser = false;
+                        }
+                        timeLeft = moveTowardsDestination(timeLeft);
+                    }
+                    try {
+                        Thread.sleep(gCommandRate);
+                    } catch (InterruptedException e) {
+                        break;
+                    }
+                }
+            }
+        });
+    }
+
+    public float moveTowardsDestination(float timeLeft){
+        // if we have no time left on current packet then look at nxt packet
+        if (timeLeft < 0) {
+            mCurrentCommand = getNextCommand();
+            // if nothing in queue then hover w/ default settings
+            if (mCurrentCommand == null) {
+                mCrazyFlie.sendPacket(new HoverPacket(0, 0, 0, mZdistance));
+                mMovementRecorder.setDroneCurrentSrcDest(mCurrentCommand.src,mCurrentCommand.src,0);
+            } else {
+                mCurrentCommand.mHoverPacket = new HoverPacket(mCurrentCommand.mHoverPacket, mZdistance);
+                mCrazyFlie.sendPacket(mCurrentCommand.mHoverPacket);
+                mMovementRecorder.setDroneCurrentSrcDest(mCurrentCommand.src,mCurrentCommand.dest,mCurrentCommand.mDistToTravel);
+                mLogger.debug("Src: " + mCurrentCommand.src + "\t Dest: " + mCurrentCommand.dest);
+                return mCurrentCommand.mTime;
+            }
+        } else {
+            // send pckt and update remaining time
+            mCrazyFlie.sendPacket(mCurrentCommand.mHoverPacket);
+            mCurrentCommand.mRemainingTime -= gCommandRate;
+
+            // update app-side drone position
+            // movementRecorder holds position data in meters
+            //      need to divide by 1000 since gCommandRate is in ms and mVx is in m/s and yawrate is in degrees/s
+            mMovementRecorder.incrementDroneAll(mCurrentCommand.mVx * gCommandRate / 1000.0,
+                    mCurrentCommand.mVy * gCommandRate / 1000.0,
+                    mCurrentCommand.mYawrate * gCommandRate / 1000.0);
+            mLogger.debug("dA: " + mCurrentCommand.mYawrate);
+            return mCurrentCommand.mRemainingTime;
+
+
+        }
+        return -1;
+    }
+
     // if crayzflie is GROUNDED then it will start the packet sender thread
     public void liftOff(){
         if (mState == STATE.GROUNDED){
             mLogger.debug("[PacketControl]: liftOff Called!");
-            mPacketSender = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    // init for compiler
-                    CfCommand currentCommand = new CfCommand();
-                    float timeLeft = -1;
-                    while (mCrazyFlie != null) {
-                        // If not grounded then look at queue
-                        if (mState != STATE.GROUNDED) {
-                            // if we have no time left on current packet then look at nxt packet
-                            if (timeLeft < 0) {
-                                currentCommand = getNextCommand();
-                                // if nothing in queue then hover w/ default settings
-                                if (currentCommand == null) {
-                                    mCrazyFlie.sendPacket(new HoverPacket(0, 0, 0, mZdistance));
-                                } else {
-                                    currentCommand.mHoverPacket = new HoverPacket(currentCommand.mHoverPacket,mZdistance);
-                                    mCrazyFlie.sendPacket(currentCommand.mHoverPacket);
-                                    timeLeft = currentCommand.mTime;
-                                    mLogger.debug("New packet: " + currentCommand.mHoverPacket);
-                                }
-                            } else {
-                                // send pckt and update remaining time
-                                mCrazyFlie.sendPacket(currentCommand.mHoverPacket);
-                                currentCommand.mRemainingTime -= gCommandRate;
-                                timeLeft = currentCommand.mRemainingTime;
-
-                                // update app-side drone position
-                                // movementRecorder holds position data in meters
-                                //      need to divide by 1000 since gCommandRate is in ms and mVx is in m/s
-                                mMovementRecorder.incrementAll(currentCommand.mVx*gCommandRate/1000.0,
-                                        currentCommand.mVy*gCommandRate/1000.0,
-                                        currentCommand.mYawrate*gCommandRate/1000.0);
-
-                               // mLogger.debug(currentCommand + " , TimeLeft: " + timeLeft);
-                            }
-                        }
-                        try {
-                            Thread.sleep(gCommandRate);
-                        } catch (InterruptedException e) {
-                            break;
-                        }
-                    }
-                }
-            });
+            mPacketSender = createPacketSenderThread();
             /*
             mState = STATE.LIFTOFF;
             mThrust = mLiftOffThrust / 2.0f;
@@ -340,11 +389,6 @@ public class PacketControl implements Serializable{
             mYawRate = 0;
             mQueue.clear();
             mCrazyFlie.sendPacket(new HoverPacket(0,0,0,gBaseHeight));
-            try{
-                Thread.sleep(gCommandRate*5);
-            } catch (Exception e) {}
-
-            mCrazyFlie.sendPacket(new CommanderPacket(0, 0, 0, (char) (0.0f), mControls.isXmode()));
             mState = STATE.GROUNDED;
         } else {
             mLogger.debug("[PacketControl]: Not Airborn!");
@@ -389,6 +433,18 @@ public class PacketControl implements Serializable{
         mLogger.debug("HoverThrustControlFactor Set to: " + mHoverThrustControlFactor);
     }
 
+    public void incrementThrust(int thrust){
+        if(mThrust + thrust <= absMaxThrust*mMaxThrust) {
+            mThrust += thrust;
+        }
+    }
+
+    /**  Setter functions **/
+
+    public void setBacktrack(boolean b) { mBacktrackUser = b; }
+
+    public boolean getBacktrack(boolean b) { return mBacktrackUser; }
+
     public void setRoll(int roll){
         mRoll= roll;
     }
@@ -403,14 +459,8 @@ public class PacketControl implements Serializable{
 
     public void setmZdistance(float mZdistance){this.mZdistance = mZdistance;}
 
-    public void incrementThrust(int thrust){
-        if(mThrust + thrust <= absMaxThrust*mMaxThrust) {
-            mThrust += thrust;
-        }
-    }
+    public void setMovementRecorder(MovementRecorder mr){mMovementRecorder = mr;}
 
-
-    /**  Setter functions **/
     public void setMaxThrust(float thrust){
          mMaxThrust = thrust;
     }
