@@ -13,6 +13,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.lang.Runnable;
 
 import se.bitcraze.crazyflie.lib.crazyflie.Crazyflie;
+import se.bitcraze.crazyflie.lib.crtp.CrtpDriver;
 import se.bitcraze.crazyflie.lib.crtp.HoverPacket;
 import se.bitcraze.crazyfliecontrol.controller.Controls;
 
@@ -85,18 +86,6 @@ public class PacketControl implements Serializable{
         mYaw = 0;
         mThrust = mLiftOffThrust;
         mCrazyFlie = cf;
-        mMaxThrust = control.getMaxThrust();
-        mMinThrust = control.getMinThrust();
-        mControls = control;
-    }
-
-    public void setCF(Crazyflie  cf){
-        mCrazyFlie = cf;
-    }
-
-    public void setControl(Controls control){
-        if (control == null)
-            return;
         mMaxThrust = control.getMaxThrust();
         mMinThrust = control.getMinThrust();
         mControls = control;
@@ -296,10 +285,14 @@ public class PacketControl implements Serializable{
                 while (mCrazyFlie != null) {
                     // If not grounded then look at queue
                     if (mState != STATE.GROUNDED) {
-                        if(mBacktrackUser) {
+                        if(mCrazyFlie.getDriver().isTooFar()) {
+                            /*
                             timeLeft = -1;
                             mQueue.clear();
                             mBacktrackUser = false;
+                            */
+                            // hover in place while out of too far.
+                            mCrazyFlie.sendPacket(new HoverPacket(0, 0, 0, mZdistance));
                         }
                         timeLeft = moveTowardsDestination(timeLeft);
                     }
@@ -459,14 +452,24 @@ public class PacketControl implements Serializable{
 
     public void setmZdistance(float mZdistance){this.mZdistance = mZdistance;}
 
-    public void setMovementRecorder(MovementRecorder mr){mMovementRecorder = mr;}
-
     public void setMaxThrust(float thrust){
          mMaxThrust = thrust;
     }
 
-    public void setMinThrust(float thrust){
-        mMinThrust = thrust;
+    public void setMinThrust(float thrust){ mMinThrust = thrust; }
+
+    public void setMovementRecorder(MovementRecorder mr){mMovementRecorder = mr;}
+
+    public void setCF(Crazyflie  cf){
+        mCrazyFlie = cf;
+    }
+
+    public void setControl(Controls control){
+        if (control == null)
+            return;
+        mMaxThrust = control.getMaxThrust();
+        mMinThrust = control.getMinThrust();
+        mControls = control;
     }
 
     public String toString(){
