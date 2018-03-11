@@ -313,7 +313,6 @@ public class PacketControl implements Serializable{
             // if nothing in queue then hover w/ default settings
             if (mCurrentCommand == null) {
                 mCrazyFlie.sendPacket(new HoverPacket(0, 0, 0, mZdistance));
-                mMovementRecorder.setDroneCurrentSrcDest(mCurrentCommand.src,mCurrentCommand.src,0);
             } else {
                 mCurrentCommand.mHoverPacket = new HoverPacket(mCurrentCommand.mHoverPacket, mZdistance);
                 mCrazyFlie.sendPacket(mCurrentCommand.mHoverPacket);

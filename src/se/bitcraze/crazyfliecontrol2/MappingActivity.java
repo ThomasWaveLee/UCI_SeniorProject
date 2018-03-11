@@ -25,7 +25,8 @@ public class MappingActivity extends Activity{
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        graph = new Graph().init();
+        //graph = new Graph().init();
+        graph = new Graph().init_Apartment();
         setContentView(R.layout.activity_mapping);
 
         mappingView = new MappingView(this);

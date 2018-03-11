@@ -80,21 +80,22 @@ public class Graph {
         nodeTable.addElement(new Node(0, "Drone", 0, 0));
         nodeTable.addElement(new Node(1, "User", 0, 0));
         nodeTable.addElement(new Node(2, "Door", 0, 0));                // A
-        nodeTable.addElement(new Node(3, "", 1, 0));                    // B
-        nodeTable.addElement(new Node(4, "", 1, 3));                    // C
+        nodeTable.addElement(new Node(3, "Path1", 1, 0));               // B
+        nodeTable.addElement(new Node(4, "Path2", 1, 3));               // C
         nodeTable.addElement(new Node(5, "Kitchen", 1, 5));             // D
-        nodeTable.addElement(new Node(6, "Room #1", -2, 3));            // E
-        nodeTable.addElement(new Node(7, "", 3, 3));                    // F
-        nodeTable.addElement(new Node(8, "", 3, 4));                    // G
-        nodeTable.addElement(new Node(9, "Room #3", 5, 4));             // H
-        nodeTable.addElement(new Node(10, "", 5, 5));                   // I
+        nodeTable.addElement(new Node(6, "Room1", -2, 3));              // E
+        nodeTable.addElement(new Node(7, "Path3", 3, 3));               // F
+        nodeTable.addElement(new Node(8, "Path4", 3, 4));               // G
+        nodeTable.addElement(new Node(9, "Room3", 5, 4));               // H
+        nodeTable.addElement(new Node(10, "Path5", 5, 5));              // I
         nodeTable.addElement(new Node(11, "Shared Restroom", 5, 6));    // J
-        nodeTable.addElement(new Node(12, "Room #2", 7, 5));            // K
+        nodeTable.addElement(new Node(12, "Room2", 7, 5));              // K
 
         addEdge(nodeTable.elementAt(2), nodeTable.elementAt(3), 1.2954, 0);
         addEdge(nodeTable.elementAt(3), nodeTable.elementAt(4), 2.8194, 90);
         addEdge(nodeTable.elementAt(4), nodeTable.elementAt(5), 2.286, 90);
         addEdge(nodeTable.elementAt(4), nodeTable.elementAt(6), 3.048, 180);
+        addEdge(nodeTable.elementAt(4), nodeTable.elementAt(7), 2.0574, 180);
         addEdge(nodeTable.elementAt(7), nodeTable.elementAt(8), 0.381, 90);
         addEdge(nodeTable.elementAt(8), nodeTable.elementAt(9), 1.524, 0);
         addEdge(nodeTable.elementAt(9), nodeTable.elementAt(10), 0.762, 90);
@@ -260,8 +261,9 @@ public class Graph {
     }
 
     private Node getNode(String name){
+        String lowercase = name.toLowerCase();
         for(Node n: nodeTable){
-            if(n.name.equals(name))
+            if((n.name.toLowerCase()).equals(lowercase))
                 return n;
         }
         return null;

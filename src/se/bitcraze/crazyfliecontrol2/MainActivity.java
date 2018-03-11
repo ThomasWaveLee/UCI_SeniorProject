@@ -269,7 +269,7 @@ public class MainActivity extends Activity {
                     return;
                 }
                 /* if map result has instructions, reveal GO button */
-                if(mapResult.length() > 1 && mapResult.substring(3,5).equals("->")){
+                if(mapResult.length() > 1 && mapResult.contains("->")){
                     goButton.setVisibility(View.VISIBLE);
                     goButton.setOnClickListener(new View.OnClickListener(){
                         @Override
@@ -353,7 +353,7 @@ public class MainActivity extends Activity {
             }
             orientation = newOrientation;
 
-            int ratio = 15;
+            int ratio = 1;
             // instruct crazyflie to go forward
             // for now to keep drone for going off, set to magnitude/ratio and set velocity of .1 m/s
             // 2 input Strings for src Node and dest Node names
@@ -992,31 +992,6 @@ public class MainActivity extends Activity {
 
             // connect
             mCrazyflie.connect(new ConnectionData(radioChannel, radioDatarate));
-            /* // For background processes. currently unused
-            mBleChecker = new BleChecker();
-            mBackgroundThread = new Thread(){
-                @Override
-                public void run(){
-                    try{
-                        if(mBleChecker.droneOutofRange()){
-                            mPacketControl.setBacktrack(true);
-                            // wait for drone packet sender thread to reset drone queue before adding new commands
-                            while(mPacketControl.getBacktrack()){
-                                continue;
-                            }
-                            //  auto send info to graphing activity
-                            //  used info:
-                            //      drone src node, drone dest node, dist traveled, dist to travel
-                            //      user position?
-                            //      result activity command value
-                        }
-                        Thread.sleep(5000);
-                    } catch (Exception e){
-                        Log.d(LOG_TAG,"Background thread interuppted");
-                    }
-                }
-            };
-            */
 
 //            mCrazyflie.addDataListener(new DataListener(CrtpPort.CONSOLE) {
 //

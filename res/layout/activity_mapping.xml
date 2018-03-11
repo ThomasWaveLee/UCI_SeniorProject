@@ -73,7 +73,7 @@
             android:ems="10"
             android:gravity="center_horizontal|bottom"
             android:inputType="textPersonName"
-            android:text="A,E"
+            android:text="Room2,Room3"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintHorizontal_bias="0.5"
             app:layout_constraintStart_toStartOf="parent"
