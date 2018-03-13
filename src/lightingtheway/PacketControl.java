@@ -30,7 +30,7 @@ public class PacketControl implements Serializable{
 
     public final static int absMaxThrust = 65535;
     // period in ms at which to send packet to crazyflie
-    public final static int gCommandRate = 200;
+    public final static int gCommandRate = 100;
     // base height to hover at
     public final static float gBaseHeight = 0.1f;
 
@@ -144,9 +144,11 @@ public class PacketControl implements Serializable{
                     break;
                 case TURN_LEFT:
                     mHoverPacket = new HoverPacket(0,0,-yawRate,mZdistance);
+                    mYawrate = yawRate;
                     break;
                 case TURN_RIGHT:
                     mHoverPacket = new HoverPacket(0,0,yawRate,mZdistance);
+                    mYawrate = yawRate;
                     break;
                 case UP:
                 default:
@@ -291,7 +293,7 @@ public class PacketControl implements Serializable{
                             mQueue.clear();
                             mBacktrackUser = false;
                             */
-                            // hover in place while out of too far.
+                            // hover in place while out too far.
                             mCrazyFlie.sendPacket(new HoverPacket(0, 0, 0, mZdistance));
                         }
                         timeLeft = moveTowardsDestination(timeLeft);
@@ -308,7 +310,7 @@ public class PacketControl implements Serializable{
 
     public float moveTowardsDestination(float timeLeft){
         // if we have no time left on current packet then look at nxt packet
-        if (timeLeft < 0) {
+        if (timeLeft <= 0) {
             mCurrentCommand = getNextCommand();
             // if nothing in queue then hover w/ default settings
             if (mCurrentCommand == null) {
@@ -317,12 +319,20 @@ public class PacketControl implements Serializable{
                 mCurrentCommand.mHoverPacket = new HoverPacket(mCurrentCommand.mHoverPacket, mZdistance);
                 mCrazyFlie.sendPacket(mCurrentCommand.mHoverPacket);
                 mMovementRecorder.setDroneCurrentSrcDest(mCurrentCommand.src,mCurrentCommand.dest,mCurrentCommand.mDistToTravel);
+                mMovementRecorder.incrementDroneAll(mCurrentCommand.mVx * gCommandRate / 1000.0,
+                        mCurrentCommand.mVy * gCommandRate / 1000.0,
+                        mCurrentCommand.mYawrate * gCommandRate / 1000.0);
+                mCurrentCommand.mRemainingTime -= gCommandRate;
+
+
                 mLogger.debug("Src: " + mCurrentCommand.src + "\t Dest: " + mCurrentCommand.dest);
+                mLogger.debug("Packet: " + mCurrentCommand.mHoverPacket);
+                mLogger.debug("MovementRecorder: " + mMovementRecorder);
                 return mCurrentCommand.mTime;
             }
         } else {
             // send pckt and update remaining time
-            mCrazyFlie.sendPacket(mCurrentCommand.mHoverPacket);
+            mCrazyFlie.sendPacket(new HoverPacket(mCurrentCommand.mHoverPacket, mZdistance));
             mCurrentCommand.mRemainingTime -= gCommandRate;
 
             // update app-side drone position
@@ -331,7 +341,6 @@ public class PacketControl implements Serializable{
             mMovementRecorder.incrementDroneAll(mCurrentCommand.mVx * gCommandRate / 1000.0,
                     mCurrentCommand.mVy * gCommandRate / 1000.0,
                     mCurrentCommand.mYawrate * gCommandRate / 1000.0);
-            mLogger.debug("dA: " + mCurrentCommand.mYawrate);
             return mCurrentCommand.mRemainingTime;
 
 
@@ -396,6 +405,8 @@ public class PacketControl implements Serializable{
     }
 
     public void incrementZDistance(float dZ) {
+        // .1m above ground is questionably stable as is. dont go any closer to ground
+        if(mZdistance + dZ <= .1f) {return;}
         mZdistance += dZ;
         mLogger.debug("ZDistance Set to: " + mZdistance);
     }
