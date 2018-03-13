@@ -9,7 +9,7 @@ public class MovementRecorder {
 
     private double mDroneXpos = 0, mDroneYpos = 0;     // in meters
     // Drone base angle 'forward' is considered 0 degrees,
-    private double mDroneCurrentAngle = 0;        // in degrees
+    private double mDroneCurrentAngle = 90;        // in degrees
     private String mDroneCurSrc = "", mDroneCurDest = "";
     private float mPathDistTraveled = 0, mPathDistToTravel = 0;
 
@@ -33,7 +33,9 @@ public class MovementRecorder {
         return inc;
     }
 
-    private void incrementDroneAngle(double dA) { mDroneCurrentAngle += dA; }
+    private void incrementDroneAngle(double dA) {
+        mDroneCurrentAngle += dA;
+    }
 
     public void setCurrentDroneAngle(double angle) { mDroneCurrentAngle = angle; }
 
@@ -52,6 +54,8 @@ public class MovementRecorder {
 
         //mLogger.debug(toString());
     }
+
+    public double getCurrentAngle() { return mDroneCurrentAngle; }
 
     public String toString(){
         return "xPos: " + mDroneXpos + "; yPos: " + mDroneYpos + "; curAngle(degrees): " + mDroneCurrentAngle;

@@ -64,10 +64,10 @@ public class Graph {
         /*Apartment map:
          -----------------------------------------------
          |.............................................|
-         |.............................................|
-         |...............[D]............[J]............|
-         |................|..............|.............|
-         |................|.......[G]---[H]------[K]...|
+         |..............................[J]............|
+         |...............[D].............|.............|
+         |................|.............[I]------[K]...|
+         |................|.......[G]---[H]............|
          |...[E]---------[C]------[F]..................|
          |................|............................|
          |................|............................|
@@ -95,12 +95,12 @@ public class Graph {
         addEdge(nodeTable.elementAt(3), nodeTable.elementAt(4), 2.8194, 90);
         addEdge(nodeTable.elementAt(4), nodeTable.elementAt(5), 2.286, 90);
         addEdge(nodeTable.elementAt(4), nodeTable.elementAt(6), 3.048, 180);
-        addEdge(nodeTable.elementAt(4), nodeTable.elementAt(7), 2.0574, 180);
-        addEdge(nodeTable.elementAt(7), nodeTable.elementAt(8), 0.381, 90);
-        addEdge(nodeTable.elementAt(8), nodeTable.elementAt(9), 1.524, 0);
-        addEdge(nodeTable.elementAt(9), nodeTable.elementAt(10), 0.762, 90);
+        addEdge(nodeTable.elementAt(4), nodeTable.elementAt(7), 2.032, 0);
+        addEdge(nodeTable.elementAt(7), nodeTable.elementAt(8), 0.508, 90);
+        addEdge(nodeTable.elementAt(8), nodeTable.elementAt(9), 2.54, 0);
+        addEdge(nodeTable.elementAt(9), nodeTable.elementAt(10), 0.835, 90);
         addEdge(nodeTable.elementAt(10), nodeTable.elementAt(11), 1.524, 90);
-        addEdge(nodeTable.elementAt(10), nodeTable.elementAt(12), 2.032, 0);
+        addEdge(nodeTable.elementAt(10), nodeTable.elementAt(12), 1.778, 0);
 
         return this;
     }

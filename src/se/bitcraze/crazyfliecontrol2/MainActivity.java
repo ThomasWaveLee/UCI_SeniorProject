@@ -281,20 +281,19 @@ public class MainActivity extends Activity {
                                     Log.d(LOG_TAG, "Ramp - start");
                                     mRampButton.setBackgroundDrawable(getResources().getDrawable(R.drawable.custom_button_connected_ble));
                                     startRampSequence();
-                                } else {
-                                    Log.d(LOG_TAG, "Ramp - land");
-                                    mRampButton.setBackgroundDrawable(getResources().getDrawable(R.drawable.custom_button));
-                                    startLandSequence();
+                                    mRampToggle = !mRampToggle;
                                 }
-                                mRampToggle = !mRampToggle;
 
                                 /* send commands to crazyflie */
                                 instructCrazyFlie(mapResult);
                             } else {
                                 Log.d(LOG_TAG, "Thinks crazyflie is null or not connected");
                             }
+                            goButton.setVisibility(View.INVISIBLE);
+                            goButton.setEnabled(false);
                         }
                     });
+                    goButton.setEnabled(true);
                 }
                 else{
                     goButton.setVisibility(View.INVISIBLE);
@@ -309,7 +308,12 @@ public class MainActivity extends Activity {
         west = 180
         south = 270 */
 
-        float orientation = 90.0f;
+        // wait for crazyflie to lift off before giving instructions
+        try{
+            Thread.sleep(200);
+        } catch (Exception e) {}
+
+        float orientation = (float)mMovementRecorder.getCurrentAngle();
         String[] allCommands = instructions.split("\n");
         String[] command; /* 2 elements, nodes and vector */
         String[] nodes; /* 2 elements, 0=src, 1=dest */
@@ -346,10 +350,6 @@ public class MainActivity extends Activity {
                     turn = 180.0f-turn;
                     //System.out.println("Turn left: " + turn);
                 }
-            }
-            orientation = newOrientation;
-            if( i == 1 ) {
-                mMovementRecorder.setCurrentDroneAngle(orientation);
             }
             orientation = newOrientation;
 
@@ -546,7 +546,7 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(View v) {
                 // mPacketControl.incrementVx(0.1f);
-                mPacketControl.goRight(.5f,.1f);
+                mPacketControl.goRight(.1f,.1f);
             }
         });
         mDeltaXDownButton.setVisibility(View.VISIBLE);
@@ -554,7 +554,7 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(View v) {
                 //mPacketControl.incrementVx(-0.1f);
-                mPacketControl.goLeft(.5f,.1f);
+                mPacketControl.goLeft(.1f,.1f);
             }
         });
         mDeltaYUpButton.setVisibility(View.VISIBLE);
@@ -562,7 +562,7 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(View v) {
                 //mPacketControl.incrementVy(0.1f);
-                mPacketControl.goForward(.5f,.1f);
+                mPacketControl.goForward(.1f,.1f);
             }
         });
         mDeltaYDownButton.setVisibility(View.VISIBLE);
@@ -570,21 +570,21 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(View v) {
                 //mPacketControl.incrementVy(-0.1f);
-                mPacketControl.goBack(.5f,.1f);
+                mPacketControl.goBack(.1f,.1f);
             }
         });
         mLiftOffThreshUpButton.setVisibility(View.VISIBLE);
         mLiftOffThreshUpButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mPacketControl.turnLeft(90,18);
+                mPacketControl.turnLeft(5,1);
             }
         });
         mLiftOffThreshDownButton.setVisibility(View.VISIBLE);
         mLiftOffThreshDownButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mPacketControl.turnRight(90,18);
+                mPacketControl.turnRight(5,1);
             }
         });
         mHoverThreshUpButton.setVisibility(View.VISIBLE);
