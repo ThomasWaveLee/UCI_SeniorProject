@@ -16,7 +16,8 @@ public class Graph {
     private int numOfNodes;
 
     public Graph(){
-        numOfNodes = 5+2;
+        //numOfNodes = 5+2;
+        numOfNodes = 11+2;
     }
 
     public int getNumOfNodes(){

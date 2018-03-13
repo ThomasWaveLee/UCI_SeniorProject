@@ -24,26 +24,22 @@
             android:layout_height="wrap_content"
 
             android:layout_alignParentBottom="true"
-            android:layout_alignParentLeft="true"
             android:layout_alignParentStart="true"
             android:gravity="center_horizontal|bottom"
             android:text="Calculate"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintHorizontal_bias="0.5"
-            app:layout_constraintStart_toStartOf="parent"
-            tools:layout_editor_absoluteY="123dp" />
+            app:layout_constraintStart_toStartOf="parent" />
 
         <Button
             android:id="@+id/button_main"
             android:layout_width="match_parent"
-            android:layout_height="292dp"
+            android:layout_height="wrap_content"
             android:layout_alignTop="@+id/button_calculate"
             android:layout_toEndOf="@+id/button_calculate"
             android:layout_toRightOf="@+id/button_calculate"
-            android:gravity="center_horizontal"
-            android:text="Main"
-            tools:layout_editor_absoluteX="16dp"
-            tools:layout_editor_absoluteY="16dp" />
+            android:gravity="center_horizontal|bottom"
+            android:text="Main" />
 
         <TextView
             android:id="@+id/textView_directions"
@@ -62,22 +58,42 @@
             app:layout_constraintStart_toStartOf="parent"
             tools:layout_editor_absoluteY="328dp" />
 
-        <EditText
-            android:id="@+id/editText_startDest"
+        <Spinner
+            android:id="@+id/spinner_src"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-
             android:layout_above="@+id/textView_directions"
-            android:layout_alignParentLeft="true"
             android:layout_alignParentStart="true"
-            android:ems="10"
-            android:gravity="center_horizontal|bottom"
-            android:inputType="textPersonName"
-            android:text="Room2,Room3"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.5"
-            app:layout_constraintStart_toStartOf="parent"
-            tools:layout_editor_absoluteY="72dp" />
+            android:layout_toStartOf="@+id/button_main" />
+
+        <Spinner
+            android:id="@+id/spinner_dest"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignBottom="@+id/spinner_src"
+            android:layout_toEndOf="@+id/spinner_src" />
+
+        <TextView
+            android:id="@+id/textView2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_above="@+id/spinner_src"
+            android:layout_alignParentStart="true"
+            android:layout_toStartOf="@+id/spinner_dest"
+            android:gravity="center_horizontal"
+            android:text="Source" />
+
+        <TextView
+            android:id="@+id/textView3"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignBaseline="@+id/textView2"
+            android:layout_alignBottom="@+id/textView2"
+            android:layout_alignParentEnd="true"
+            android:layout_toEndOf="@+id/spinner_src"
+            android:gravity="center_horizontal"
+            android:text="Destination" />
+
     </RelativeLayout>
 
 </android.support.constraint.ConstraintLayout>
