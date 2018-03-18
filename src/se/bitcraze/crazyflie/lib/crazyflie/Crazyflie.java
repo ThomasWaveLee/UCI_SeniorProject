@@ -261,11 +261,8 @@ public class Crazyflie {
             mLogger.info("Initial packet has been received! => State.CONNECTED");
             this.mState = State.CONNECTED;
             //self.link_established.call(self.link_uri)
-            //TODO: fix hacky-di-hack
-            if (this.mDriver instanceof RadioDriver) {
-                this.mDriver.notifyConnected();
-                startConnectionSetup();
-            }
+            this.mDriver.notifyConnected();
+            startConnectionSetup();
         }
         //self.packet_received.remove_callback(self._check_for_initial_packet_cb)
         // => IncomingPacketHandler
@@ -305,13 +302,8 @@ public class Crazyflie {
             }
         };
         //mLog.refreshToc(self._log_toc_updated_cb, self._toc_cache);
-        if (mDriver instanceof RadioDriver) {
-            mLogg.refreshToc(loggTocFetchFinishedListener, mTocCache);
-        } else {
-            //TODO: shortcut for BLELink
-            mState = State.SETUP_FINISHED; //important, otherwise BLE keeps trying to reconnect
-            mDriver.notifySetupFinished();
-        }
+        mLogger.debug("Toc fetch start?");
+        mLogg.refreshToc(loggTocFetchFinishedListener, mTocCache);
 
         //TODO: self.mem.refresh(self._mems_updated_cb)
     }
